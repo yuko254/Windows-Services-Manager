@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, memo, useContext } from 'react';
 import { ThemeContext } from './main';
 import {
+  makeStyles,
   Button,
   Input,
   Table,
@@ -57,6 +58,19 @@ import {
   ValidatePathExists,
   DiagnoseEnvironmentAccess
 } from "../wailsjs/go/main/App";
+
+const useStyles = makeStyles({
+  toastGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'auto 1fr',
+    alignItems: 'start',
+    gap: '8px',
+  },
+  messageColumn: {
+    gridColumn: 2,
+    gridRow: 2,
+  },
+});
 
 // Service row component, optimized with memo
 const ServiceRow = memo(({ service, onStart, onStop, onDelete, onAutoStartToggle }) => {
@@ -145,7 +159,6 @@ const ServiceRow = memo(({ service, onStart, onStop, onDelete, onAutoStartToggle
     </TableRow>
   );
 });
-
 ServiceRow.displayName = 'ServiceRow';
 
 function App() {
@@ -167,14 +180,15 @@ function App() {
     args: '',
     workingDir: ''
   });
-  
+
+  const styles = useStyles();
   const { dispatchToast } = useToastController();
 
   const showToast = useCallback((title, message, intent = 'success') => {
     dispatchToast(
-      <Toast>
-        <ToastTitle>{title}</ToastTitle>
-        {message && <Text>{message}</Text>}
+      <Toast className={styles.toastGrid}>
+          <ToastTitle>{title}</ToastTitle>
+          {message && <Text className={styles.messageColumn}>{message}</Text>}
       </Toast>,
       { intent, timeout: 3000 }
     );
@@ -255,7 +269,7 @@ function App() {
 
   const handleCreateService = useCallback(async () => {
     if (!newService.name || !newService.exePath) {
-      showToast('Validation Error', 'Please enter service name and executable path', 'error');
+      showToast('Validation error', 'Please enter service name and executable path', 'error');
       return;
     }
 
@@ -901,6 +915,7 @@ function App() {
               <Text>
                 Are you sure you want to delete the service "{serviceToDelete?.name}"?
               </Text>
+              <br />
               <Text style={{ marginTop: '8px', color: '#d13438' }}>
                 This service will be permanently removed!
               </Text>
