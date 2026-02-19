@@ -45,9 +45,3 @@ Directly download the `exe` program from [releases](https://github.com/sky22333/
 
 #### Development Mode
     wails dev
-
-## Interface Preview
-
-![Main Interface](/.github/demo/demo1.jpg)
-
-![Add Service](/.github/demo/demo2.jpg)
