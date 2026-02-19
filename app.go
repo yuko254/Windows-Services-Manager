@@ -14,7 +14,7 @@ import (
 	"golang.org/x/sys/windows/registry"
 )
 
-// Service 表示一个后台服务
+// Service represents a background service
 type Service struct {
 	ID         string    `json:"id"`
 	Name       string    `json:"name"`
@@ -28,7 +28,7 @@ type Service struct {
 	UpdatedAt  time.Time `json:"updatedAt"`
 }
 
-// ServiceConfig 用于创建新服务的配置
+// ServiceConfig is the configuration for creating a new service
 type ServiceConfig struct {
 	Name       string `json:"name"`
 	ExePath    string `json:"exePath"`
@@ -48,14 +48,15 @@ func NewApp() *App {
 		environmentManager: NewEnvironmentManager(),
 	}
 }
-// startup 在应用启动时调用
+
+// startup is called when the application starts
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
 	a.serviceManager.SetContext(ctx)
 	a.serviceManager.loadServices()
 }
 
-// GetServices 获取所有服务列表
+// GetServices returns the list of all services
 func (a *App) GetServices() []*Service {
 	services, err := a.serviceManager.GetServices()
 	if err != nil {
@@ -64,37 +65,37 @@ func (a *App) GetServices() []*Service {
 	return services
 }
 
-// CreateService 创建新的服务
+// CreateService creates a new service
 func (a *App) CreateService(config ServiceConfig) (*Service, error) {
 	return a.serviceManager.CreateService(config)
 }
 
-// StartService 启动服务
+// StartService starts a service
 func (a *App) StartService(serviceID string) error {
 	return a.serviceManager.StartService(serviceID)
 }
 
-// StopService 停止服务
+// StopService stops a service
 func (a *App) StopService(serviceID string) error {
 	return a.serviceManager.StopService(serviceID)
 }
 
-// DeleteService 删除服务
+// DeleteService deletes a service
 func (a *App) DeleteService(serviceID string) error {
 	return a.serviceManager.DeleteService(serviceID)
 }
 
-// SelectFile 选择文件对话框
+// SelectFile opens a file selection dialog
 func (a *App) SelectFile() (string, error) {
 	selection, err := runtime.OpenFileDialog(a.ctx, runtime.OpenDialogOptions{
-		Title: "选择可执行文件",
+		Title: "Select Executable File",
 		Filters: []runtime.FileFilter{
 			{
-				DisplayName: "可执行文件 (*.exe)",
+				DisplayName: "Executable Files (*.exe)",
 				Pattern:     "*.exe",
 			},
 			{
-				DisplayName: "所有文件 (*.*)",
+				DisplayName: "All Files (*.*)",
 				Pattern:     "*.*",
 			},
 		},
@@ -107,10 +108,10 @@ func (a *App) SelectFile() (string, error) {
 	return selection, nil
 }
 
-// SelectDirectory 选择目录对话框
+// SelectDirectory opens a directory selection dialog
 func (a *App) SelectDirectory() (string, error) {
 	selection, err := runtime.OpenDirectoryDialog(a.ctx, runtime.OpenDialogOptions{
-		Title: "选择工作目录",
+		Title: "Select Working Directory",
 	})
 
 	if err != nil {
@@ -120,7 +121,7 @@ func (a *App) SelectDirectory() (string, error) {
 	return selection, nil
 }
 
-// CheckAdminPrivileges 检查管理员权限
+// CheckAdminPrivileges checks if the application is running with administrator privileges
 func (a *App) CheckAdminPrivileges() bool {
 	return isUserAnAdmin()
 }
@@ -161,7 +162,7 @@ func isUserAnAdmin() bool {
 	return member
 }
 
-// openCurrentThreadTokenSafe 安全地获取当前线程的访问令牌
+// openCurrentThreadTokenSafe safely retrieves the access token of the current thread
 func openCurrentThreadTokenSafe() (windows.Token, error) {
 	if err := impersonateSelf(); err != nil {
 		return 0, err
@@ -182,7 +183,7 @@ func openCurrentThreadTokenSafe() (windows.Token, error) {
 	return token, nil
 }
 
-// Windows API 函数声明
+// Windows API function declarations
 var (
 	modadvapi32 = windows.NewLazySystemDLL("advapi32.dll")
 	modkernel32 = windows.NewLazySystemDLL("kernel32.dll")
@@ -193,7 +194,7 @@ var (
 	procRevertToSelf     = modadvapi32.NewProc("RevertToSelf")
 )
 
-// getCurrentThread 获取当前线程的伪句柄
+// getCurrentThread gets a pseudo handle for the current thread
 func getCurrentThread() (windows.Handle, error) {
 	r0, _, e1 := syscall.Syscall(procGetCurrentThread.Addr(), 0, 0, 0, 0)
 	handle := windows.Handle(r0)
@@ -206,7 +207,7 @@ func getCurrentThread() (windows.Handle, error) {
 	return handle, nil
 }
 
-// openThreadToken 打开线程访问令牌
+// openThreadToken opens the thread access token
 func openThreadToken(h windows.Handle, access uint32, self bool, token *windows.Token) error {
 	var _p0 uint32
 	if self {
@@ -230,7 +231,7 @@ func openThreadToken(h windows.Handle, access uint32, self bool, token *windows.
 	return nil
 }
 
-// impersonateSelf 模拟自身
+// impersonateSelf impersonates the calling thread
 func impersonateSelf() error {
 	r0, _, e1 := syscall.Syscall(procImpersonateSelf.Addr(), 1, uintptr(2), 0, 0)
 	if r0 == 0 {
@@ -242,7 +243,7 @@ func impersonateSelf() error {
 	return nil
 }
 
-// revertToSelf 恢复到原始安全上下文
+// revertToSelf restores the original security context
 func revertToSelf() error {
 	r0, _, e1 := syscall.Syscall(procRevertToSelf.Addr(), 0, 0, 0, 0)
 	if r0 == 0 {
@@ -254,16 +255,16 @@ func revertToSelf() error {
 	return nil
 }
 
-// SetAutoStart 设置开机自启动
+// SetAutoStart enables or disables automatic startup with Windows
 func (a *App) SetAutoStart(enabled bool) error {
 	execPath, err := os.Executable()
 	if err != nil {
-		return fmt.Errorf("获取程序路径失败: %v", err)
+		return fmt.Errorf("failed to get program path: %v", err)
 	}
 
 	key, err := registry.OpenKey(registry.CURRENT_USER, `SOFTWARE\Microsoft\Windows\CurrentVersion\Run`, registry.ALL_ACCESS)
 	if err != nil {
-		return fmt.Errorf("打开注册表失败: %v", err)
+		return fmt.Errorf("failed to open registry: %v", err)
 	}
 	defer key.Close()
 
@@ -272,19 +273,19 @@ func (a *App) SetAutoStart(enabled bool) error {
 	if enabled {
 		err = key.SetStringValue(appName, execPath)
 		if err != nil {
-			return fmt.Errorf("设置启动项失败: %v", err)
+			return fmt.Errorf("failed to set startup entry: %v", err)
 		}
 	} else {
 		err = key.DeleteValue(appName)
 		if err != nil && err != registry.ErrNotExist {
-			return fmt.Errorf("删除启动项失败: %v", err)
+			return fmt.Errorf("failed to delete startup entry: %v", err)
 		}
 	}
 
 	return nil
 }
 
-// GetAutoStartStatus 获取开机自启动状态
+// GetAutoStartStatus checks if automatic startup with Windows is enabled
 func (a *App) GetAutoStartStatus() bool {
 	key, err := registry.OpenKey(registry.CURRENT_USER, `SOFTWARE\Microsoft\Windows\CurrentVersion\Run`, registry.QUERY_VALUE)
 	if err != nil {
@@ -296,7 +297,7 @@ func (a *App) GetAutoStartStatus() bool {
 	return err == nil
 }
 
-// RestartAsAdmin 以管理员权限重启应用
+// RestartAsAdmin restarts the application with administrator privileges
 func (a *App) RestartAsAdmin() error {
 	exe, err := os.Executable()
 	if err != nil {
@@ -350,37 +351,37 @@ func (a *App) HideWindow() {
 	runtime.WindowHide(a.ctx)
 }
 
-// SetServiceAutoStart 设置服务开机自启动
+// SetServiceAutoStart sets whether a service should start automatically at boot
 func (a *App) SetServiceAutoStart(serviceID string, enabled bool) error {
 	return a.serviceManager.SetServiceAutoStart(serviceID, enabled)
 }
 
-// GetServiceAutoStart 获取服务开机自启动状态
+// GetServiceAutoStart retrieves the auto-start status of a service
 func (a *App) GetServiceAutoStart(serviceID string) bool {
 	return a.serviceManager.GetServiceAutoStart(serviceID)
 }
 
-// AddSystemEnvironmentVariable 添加系统环境变量
+// AddSystemEnvironmentVariable adds a system environment variable
 func (a *App) AddSystemEnvironmentVariable(varName, varValue string) error {
 	return a.environmentManager.AddSystemEnvironmentVariable(varName, varValue)
 }
 
-// AddPathVariable 添加PATH环境变量
+// AddPathVariable adds a PATH environment variable
 func (a *App) AddPathVariable(pathValue string) error {
 	return a.environmentManager.AddPathVariable(pathValue)
 }
 
-// OpenSystemEnvironmentSettings 打开系统环境变量设置
+// OpenSystemEnvironmentSettings opens the system environment variables settings window
 func (a *App) OpenSystemEnvironmentSettings() error {
 	return a.environmentManager.OpenSystemEnvironmentSettings()
 }
 
-// ValidatePathExists 验证路径是否存在
+// ValidatePathExists checks whether a path exists
 func (a *App) ValidatePathExists(path string) bool {
 	return a.environmentManager.ValidatePathExists(path)
 }
 
-// DiagnoseEnvironmentAccess 诊断环境变量访问权限
+// DiagnoseEnvironmentAccess diagnoses access permissions for environment variables
 func (a *App) DiagnoseEnvironmentAccess() (map[string]interface{}, error) {
 	return a.environmentManager.DiagnoseEnvironmentAccess()
 }

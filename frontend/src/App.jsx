@@ -57,7 +57,7 @@ import {
   DiagnoseEnvironmentAccess
 } from "../wailsjs/go/main/App";
 
-// 服务行组件，使用memo优化
+// Service row component, optimized with memo
 const ServiceRow = memo(({ service, onStart, onStop, onDelete, onAutoStartToggle }) => {
   const handleStart = useCallback(() => onStart(service.id), [service.id, onStart]);
   const handleStop = useCallback(() => onStop(service.id), [service.id, onStop]);
@@ -82,8 +82,8 @@ const ServiceRow = memo(({ service, onStart, onStop, onDelete, onAutoStartToggle
             backgroundColor: service.status === 'running' ? '#107c10' : 
                            service.status === 'error' ? '#c42b1c' : '#605e5c'
           }}></div>
-          {service.status === 'running' ? '运行中' : 
-           service.status === 'error' ? '错误' : '已停止'}
+          {service.status === 'running' ? 'Running' : 
+           service.status === 'error' ? 'Error' : 'Stopped'}
         </div>
       </TableCell>
       <TableCell>
@@ -94,7 +94,7 @@ const ServiceRow = memo(({ service, onStart, onStop, onDelete, onAutoStartToggle
           <>
             <br />
             <Text size="100" style={{ color: '#666', fontStyle: 'italic' }}>
-              参数: {service.args}
+              Args: {service.args}
             </Text>
           </>
         )}
@@ -109,7 +109,7 @@ const ServiceRow = memo(({ service, onStart, onStop, onDelete, onAutoStartToggle
       <TableCell>
         <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
           {service.status === 'stopped' ? (
-            <Tooltip content="启动服务" relationship="label">
+            <Tooltip content="Start service" relationship="label">
               <Button
                 size="small"
                 appearance="subtle"
@@ -119,7 +119,7 @@ const ServiceRow = memo(({ service, onStart, onStop, onDelete, onAutoStartToggle
               />
             </Tooltip>
           ) : (
-            <Tooltip content="停止服务" relationship="label">
+            <Tooltip content="Stop service" relationship="label">
               <Button
                 size="small"
                 appearance="secondary"
@@ -130,7 +130,7 @@ const ServiceRow = memo(({ service, onStart, onStop, onDelete, onAutoStartToggle
             </Tooltip>
           )}
           
-          <Tooltip content="删除服务" relationship="label">
+          <Tooltip content="Delete service" relationship="label">
             <Button
               size="small"
               appearance="subtle"
@@ -183,7 +183,7 @@ function App() {
     checkAdminRights();
     checkAutoStartStatus();
     
-    // 监听服务状态变化事件
+    // Listen for service status change events
     EventsOn('service-status-changed', (data) => {
       setServices(prev => prev.map(service => 
         service.id === data.serviceId 
@@ -192,7 +192,7 @@ function App() {
       ));
     });
     
-    // 监听服务列表更新事件
+    // Listen for service list update events
     EventsOn('services-updated', (serviceList) => {
       setServices(serviceList || []);
     });
@@ -211,7 +211,7 @@ function App() {
         setShowAdminWarning(true);
       }
     } catch (error) {
-      console.error('检查权限失败:', error);
+      console.error('Failed to check permissions:', error);
     }
   }, []);
 
@@ -220,7 +220,7 @@ function App() {
       const status = await GetAutoStartStatus();
       setAutoStart(status);
     } catch (error) {
-      console.error('检查开机自启状态失败:', error);
+      console.error('Failed to check auto-start status:', error);
     }
   }, []);
 
@@ -228,9 +228,9 @@ function App() {
     try {
       await SetAutoStart(enabled);
       setAutoStart(enabled);
-      showToast('成功', `开机自启动已${enabled ? '启用' : '禁用'}`);
+      showToast('Success', `Auto-start ${enabled ? 'enabled' : 'disabled'}`);
     } catch (error) {
-      showToast('错误', '设置开机自启动失败: ' + error, 'error');
+      showToast('Error', 'Failed to set auto-start: ' + error, 'error');
     }
   }, [showToast]);
 
@@ -238,7 +238,7 @@ function App() {
     try {
       await RestartAsAdmin();
     } catch (error) {
-      showToast('错误', '以管理员身份重启失败: ' + error, 'error');
+      showToast('Error', 'Failed to restart as administrator: ' + error, 'error');
     }
   }, [showToast]);
 
@@ -247,19 +247,19 @@ function App() {
       const serviceList = await GetServices();
       setServices(serviceList || []);
     } catch (error) {
-      showToast('错误', '加载服务列表失败: ' + error, 'error');
+      showToast('Error', 'Failed to load service list: ' + error, 'error');
     }
   }, [showToast]);
 
   const handleCreateService = useCallback(async () => {
     if (!newService.name || !newService.exePath) {
-      showToast('验证错误', '请填写服务名称和可执行文件路径', 'error');
+      showToast('Validation Error', 'Please enter service name and executable path', 'error');
       return;
     }
 
     try {
       await CreateService(newService);
-      showToast('成功', '服务创建成功');
+      showToast('Success', 'Service created successfully');
       setIsAddDialogOpen(false);
       setNewService({
         name: '',
@@ -269,27 +269,27 @@ function App() {
       });
       loadServices();
     } catch (error) {
-      showToast('错误', '创建服务失败: ' + error, 'error');
+      showToast('Error', 'Failed to create service: ' + error, 'error');
     }
   }, [newService, showToast, loadServices]);
 
   const handleStartService = useCallback(async (serviceId) => {
     try {
       await StartService(serviceId);
-      showToast('成功', '服务启动成功');
+      showToast('Success', 'Service started successfully');
       loadServices();
     } catch (error) {
-      showToast('错误', '启动服务失败: ' + error, 'error');
+      showToast('Error', 'Failed to start service: ' + error, 'error');
     }
   }, [showToast, loadServices]);
 
   const handleStopService = useCallback(async (serviceId) => {
     try {
       await StopService(serviceId);
-      showToast('成功', '服务停止成功');
+      showToast('Success', 'Service stopped successfully');
       loadServices();
     } catch (error) {
-      showToast('错误', '停止服务失败: ' + error, 'error');
+      showToast('Error', 'Failed to stop service: ' + error, 'error');
     }
   }, [showToast, loadServices]);
 
@@ -304,10 +304,10 @@ function App() {
     
     try {
       await DeleteService(serviceToDelete.id);
-      showToast('成功', '服务删除成功');
+      showToast('Success', 'Service deleted successfully');
       loadServices();
     } catch (error) {
-      showToast('错误', '删除服务失败: ' + error, 'error');
+      showToast('Error', 'Failed to delete service: ' + error, 'error');
     } finally {
       setIsDeleteDialogOpen(false);
       setServiceToDelete(null);
@@ -317,10 +317,10 @@ function App() {
   const handleAutoStartToggle = useCallback(async (serviceId, enabled) => {
     try {
       await SetServiceAutoStart(serviceId, enabled);
-      showToast('成功', enabled ? '已启用开机自启' : '已禁用开机自启');
+      showToast('Success', enabled ? 'Auto-start enabled' : 'Auto-start disabled');
       loadServices();
     } catch (error) {
-      showToast('错误', '设置开机自启失败: ' + error, 'error');
+      showToast('Error', 'Failed to set auto-start: ' + error, 'error');
     }
   }, [showToast, loadServices]);
 
@@ -331,7 +331,7 @@ function App() {
         setNewService(prev => ({ ...prev, exePath: filePath }));
       }
     } catch (error) {
-      showToast('错误', '选择文件失败: ' + error, 'error');
+      showToast('Error', 'Failed to select file: ' + error, 'error');
     }
   }, [showToast]);
 
@@ -342,7 +342,7 @@ function App() {
         setNewService(prev => ({ ...prev, workingDir: dirPath }));
       }
     } catch (error) {
-      showToast('错误', '选择目录失败: ' + error, 'error');
+      showToast('Error', 'Failed to select directory: ' + error, 'error');
     }
   }, [showToast]);
 
@@ -353,7 +353,7 @@ function App() {
         setEnvPath(filePath);
       }
     } catch (error) {
-      showToast('错误', '选择文件失败: ' + error, 'error');
+      showToast('Error', 'Failed to select file: ' + error, 'error');
     }
   }, [showToast]);
 
@@ -364,67 +364,67 @@ function App() {
         setEnvPath(dirPath);
       }
     } catch (error) {
-      showToast('错误', '选择目录失败: ' + error, 'error');
+      showToast('Error', 'Failed to select directory: ' + error, 'error');
     }
   }, [showToast]);
 
   const handleAddEnvironmentVariable = useCallback(async () => {
     if (!envPath.trim()) {
-      showToast('验证错误', '请输入或选择文件路径', 'error');
+      showToast('Validation Error', 'Please enter or select a file path', 'error');
       return;
     }
 
     setIsAddingEnv(true);
     try {
-      // 验证路径是否存在
+      // Validate if path exists
       const exists = await ValidatePathExists(envPath);
       if (!exists) {
-        showToast('验证错误', '指定的路径不存在', 'error');
+        showToast('Validation Error', 'The specified path does not exist', 'error');
         return;
       }
 
-      // 添加到PATH环境变量
+      // Add to PATH environment variable
       await AddPathVariable(envPath);
-      showToast('成功', 'PATH环境变量添加成功！新打开的命令行窗口将生效');
+      showToast('Success', 'PATH environment variable added successfully! It will take effect in new command prompt windows.');
       
-      // 关闭对话框并清空输入
+      // Close dialog and clear input
       setIsEnvDialogOpen(false);
       setEnvPath('');
     } catch (error) {
-      console.error('环境变量添加失败:', error);
+      console.error('Failed to add environment variable:', error);
       
-      // 如果是权限错误，进行诊断
+      // If it's a permission error, perform diagnostics
       if (error.toString().includes('Access is denied') || 
           error.toString().includes('access denied') ||
-          error.toString().includes('无法读取现有PATH变量')) {
+          error.toString().includes('cannot read existing PATH variable')) {
         
         try {
           const diagnosis = await DiagnoseEnvironmentAccess();
-          console.log('权限诊断结果:', diagnosis);
+          console.log('Permission diagnosis result:', diagnosis);
           
-          let errorMsg = '权限不足，无法修改系统环境变量。\n\n';
+          let errorMsg = 'Insufficient permissions to modify system environment variables.\n\n';
           
           if (!diagnosis.registry_full) {
-            errorMsg += '• 注册表完整权限: 失败\n';
+            errorMsg += '• Registry full access: Failed\n';
           }
           if (!diagnosis.registry_write) {
-            errorMsg += '• 注册表写入权限: 失败\n';
+            errorMsg += '• Registry write access: Failed\n';
           }
           if (!diagnosis.path_read) {
-            errorMsg += '• PATH变量读取: 失败\n';
+            errorMsg += '• PATH variable read: Failed\n';
           }
           
-          errorMsg += '\n请确认：\n';
-          errorMsg += '1. 程序以管理员身份运行\n';
-          errorMsg += '2. 系统未被组策略限制环境变量修改\n';
-          errorMsg += '3. 杀毒软件未阻止注册表访问';
+          errorMsg += '\nPlease ensure:\n';
+          errorMsg += '1. The program is running as administrator\n';
+          errorMsg += '2. System group policies do not restrict environment variable changes\n';
+          errorMsg += '3. Antivirus software is not blocking registry access';
           
-          showToast('权限诊断', errorMsg, 'error');
+          showToast('Permission Diagnosis', errorMsg, 'error');
         } catch (diagError) {
-          showToast('错误', '添加环境变量失败: ' + error + '\n诊断失败: ' + diagError, 'error');
+          showToast('Error', 'Failed to add environment variable: ' + error + '\nDiagnosis failed: ' + diagError, 'error');
         }
       } else {
-        showToast('错误', '添加环境变量失败: ' + error, 'error');
+        showToast('Error', 'Failed to add environment variable: ' + error, 'error');
       }
     } finally {
       setIsAddingEnv(false);
@@ -435,17 +435,17 @@ function App() {
     try {
       await OpenSystemEnvironmentSettings();
     } catch (error) {
-      showToast('错误', '打开系统环境变量设置失败: ' + error, 'error');
+      showToast('Error', 'Failed to open system environment settings: ' + error, 'error');
     }
   }, [showToast]);
 
 
   const columns = useMemo(() => [
-    { columnKey: 'name', label: '服务名称' },
-    { columnKey: 'status', label: '状态' },
-    { columnKey: 'exePath', label: '程序路径' },
-    { columnKey: 'autoStart', label: '开机自启' },
-    { columnKey: 'actions', label: '操作' }
+    { columnKey: 'name', label: 'Service Name' },
+    { columnKey: 'status', label: 'Status' },
+    { columnKey: 'exePath', label: 'Program Path' },
+    { columnKey: 'autoStart', label: 'Auto Start' },
+    { columnKey: 'actions', label: 'Actions' }
   ], []);
 
   const serviceStats = useMemo(() => ({
@@ -459,10 +459,10 @@ function App() {
       <Toaster />
       <div className="app-container">
         <div className="header">
-          <Text size="400" weight="semibold">Windows 服务管理器</Text>
+          <Text size="400" weight="semibold">Windows Service Manager</Text>
           <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '10px' }}>
             {!adminPrivileges && (
-              <Badge color="warning" appearance="filled" className="win11-badge">非管理员模式</Badge>
+              <Badge color="warning" appearance="filled" className="win11-badge">Non-Admin Mode</Badge>
             )}
             <Button 
               appearance="subtle" 
@@ -470,7 +470,7 @@ function App() {
               onClick={() => setIsEnvDialogOpen(true)}
               className="win11-button"
             >
-              系统变量
+              System Variables
             </Button>
             <Button 
               appearance="subtle" 
@@ -478,34 +478,34 @@ function App() {
               onClick={() => setIsSettingsDialogOpen(true)}
               className="win11-button"
             >
-              应用设置
+              App Settings
             </Button>
             <Dialog open={isAddDialogOpen} onOpenChange={(_, data) => setIsAddDialogOpen(data.open)}>
               <DialogTrigger disableButtonEnhancement>
                 <Button appearance="primary" icon={<Add24Regular />} className="win11-button">
-                  添加服务
+                  Add Service
                 </Button>
               </DialogTrigger>
               <DialogSurface className="win11-dialog">
                 <DialogBody>
-                  <DialogTitle>添加新服务</DialogTitle>
+                  <DialogTitle>Add New Service</DialogTitle>
                   <DialogContent>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                      <Field label="服务名称" required>
+                      <Field label="Service Name" required>
                         <Input
                           value={newService.name}
                           onChange={(e) => setNewService(prev => ({ ...prev, name: e.target.value }))}
-                          placeholder="输入服务名称"
+                          placeholder="Enter service name"
                           className="win11-input"
                         />
                       </Field>
                       
-                      <Field label="可执行文件路径" required>
+                      <Field label="Executable Path" required>
                         <div style={{ display: 'flex', gap: '8px' }}>
                           <Input
                             value={newService.exePath}
                             onChange={(e) => setNewService(prev => ({ ...prev, exePath: e.target.value }))}
-                            placeholder="输入程序路径"
+                            placeholder="Enter program path"
                             style={{ flex: 1 }}
                             className="win11-input"
                           />
@@ -514,26 +514,26 @@ function App() {
                             onClick={handleSelectFile}
                             className="win11-button"
                           >
-                            选择
+                            Browse
                           </Button>
                         </div>
                       </Field>
                       
-                      <Field label="启动参数">
+                      <Field label="Startup Parameters">
                         <Input
                           value={newService.args}
                           onChange={(e) => setNewService(prev => ({ ...prev, args: e.target.value }))}
-                          placeholder="输入启动参数（可选）"
+                          placeholder="Enter startup parameters (optional)"
                           className="win11-input"
                         />
                       </Field>
                       
-                      <Field label="工作目录">
+                      <Field label="Working Directory">
                         <div style={{ display: 'flex', gap: '8px' }}>
                           <Input
                             value={newService.workingDir}
                             onChange={(e) => setNewService(prev => ({ ...prev, workingDir: e.target.value }))}
-                            placeholder="工作目录（留空使用程序目录）"
+                            placeholder="Working directory (leave empty to use program directory)"
                             style={{ flex: 1 }}
                             className="win11-input"
                           />
@@ -542,12 +542,12 @@ function App() {
                             onClick={handleSelectDirectory}
                             className="win11-button"
                           >
-                            选择
+                            Browse
                           </Button>
                         </div>
                       </Field>
                       
-                      <Field label="服务启动">
+                      <Field label="Service Startup">
                         <Text size="300" style={{ 
                           color: '#666', 
                           fontStyle: 'italic',
@@ -556,17 +556,17 @@ function App() {
                           borderRadius: '6px',
                           border: '1px solid #e5e7eb'
                         }}>
-                          💡 服务创建后将自动启动并运行
+                          💡 The service will automatically start after creation
                         </Text>
                       </Field>
                     </div>
                   </DialogContent>
                   <DialogActions>
                     <DialogTrigger disableButtonEnhancement>
-                      <Button appearance="secondary" className="win11-button">取消</Button>
+                      <Button appearance="secondary" className="win11-button">Cancel</Button>
                     </DialogTrigger>
                     <Button appearance="primary" onClick={handleCreateService} className="win11-button">
-                      创建服务
+                      Create Service
                     </Button>
                   </DialogActions>
                 </DialogBody>
@@ -575,18 +575,18 @@ function App() {
           </div>
         </div>
 
-        {/* 权限警告对话框 */}
+        {/* Admin Warning Dialog */}
         <Dialog open={showAdminWarning} modalType="alert">
           <DialogSurface className="win11-dialog">
             <DialogBody>
-              <DialogTitle>权限警告</DialogTitle>
+              <DialogTitle>Admin Privileges Warning</DialogTitle>
               <DialogContent>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', textAlign: 'center' }}>
                   <Text size="400" weight="semibold" style={{ color: '#d13438' }}>
-                    当前没有管理员权限，无法使用服务管理功能！
+                    No administrator privileges – service management features are unavailable!
                   </Text>
                   <Text size="300">
-                    请使用管理员权限重新启动程序以获得完整功能。
+                    Please restart the program with administrator privileges for full functionality.
                   </Text>
                 </div>
               </DialogContent>
@@ -596,37 +596,37 @@ function App() {
                   onClick={handleRestartAsAdmin}
                   className="win11-button"
                 >
-                  以管理员身份重启
+                  Restart as Administrator
                 </Button>
                 <Button 
                   appearance="secondary" 
                   onClick={() => setShowAdminWarning(false)}
                   className="win11-button"
                 >
-                  暂时忽略
+                  Ignore
                 </Button>
               </DialogActions>
             </DialogBody>
           </DialogSurface>
         </Dialog>
 
-        {/* 设置对话框 */}
+        {/* Settings Dialog */}
         <Dialog open={isSettingsDialogOpen} onOpenChange={(_, data) => setIsSettingsDialogOpen(data.open)}>
           <DialogSurface className="win11-dialog">
             <DialogBody>
-              <DialogTitle>应用设置</DialogTitle>
+              <DialogTitle>App Settings</DialogTitle>
               <DialogContent>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
-                  <Field label="权限管理">
+                  <Field label="Privileges Management">
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <Text>当前权限状态</Text>
+                        <Text>Current privilege level</Text>
                         <Badge 
                           color={adminPrivileges ? "success" : "warning"} 
                           appearance="filled"
                           className="win11-badge"
                         >
-                          {adminPrivileges ? "管理员权限" : "普通权限"}
+                          {adminPrivileges ? "Administrator" : "Standard User"}
                         </Badge>
                       </div>
                       {!adminPrivileges && (
@@ -636,13 +636,13 @@ function App() {
                           onClick={handleRestartAsAdmin}
                           className="win11-button"
                         >
-                          以管理员身份重启
+                          Restart as Administrator
                         </Button>
                       )}
                     </div>
                   </Field>
 
-                  <Field label="开机自启动">
+                  <Field label="Auto-start with Windows">
                     <div style={{ 
                       display: 'flex', 
                       justifyContent: 'space-between', 
@@ -652,7 +652,7 @@ function App() {
                       borderRadius: '12px',
                       backdropFilter: 'blur(10px)'
                     }}>
-                      <Text>为此程序添加开机自启动项</Text>
+                      <Text>Add this program to auto-start at boot</Text>
                       <Switch
                         checked={autoStart}
                         onChange={(_, data) => handleAppAutoStartToggle(data.checked)}
@@ -660,7 +660,7 @@ function App() {
                     </div>
                   </Field>
 
-                  <Field label="应用信息">
+                  <Field label="App Info">
                     <div style={{ 
                       display: 'flex', 
                       flexDirection: 'column', 
@@ -671,9 +671,9 @@ function App() {
                       backdropFilter: 'blur(10px)'
                     }}>
                       <Text size="300" weight="semibold">Windows Service Manager</Text>
-                      <Text size="200" style={{ color: '#666' }}>现代化 Windows 服务管理工具</Text>
-                      <Text size="200" style={{ color: '#666' }}>使程序以后台服务的形式运行</Text>
-                      <Text size="200" style={{ color: '#666' }}>项目地址: https://github.com/sky22333/services</Text>
+                      <Text size="200" style={{ color: '#666' }}>Modern Windows service management tool</Text>
+                      <Text size="200" style={{ color: '#666' }}>Run any program as a background service</Text>
+                      <Text size="200" style={{ color: '#666' }}>Project URL: https://github.com/sky22333/services</Text>
                     </div>
                   </Field>
                 </div>
@@ -684,21 +684,21 @@ function App() {
                   onClick={() => setIsSettingsDialogOpen(false)}
                   className="win11-button"
                 >
-                  关闭
+                  Close
                 </Button>
               </DialogActions>
             </DialogBody>
           </DialogSurface>
         </Dialog>
 
-        {/* 系统变量对话框 */}
+        {/* System Variables Dialog */}
         <Dialog open={isEnvDialogOpen} onOpenChange={(_, data) => setIsEnvDialogOpen(data.open)}>
           <DialogSurface className="win11-dialog">
             <DialogBody>
-              <DialogTitle>添加系统环境变量</DialogTitle>
+              <DialogTitle>Add System Environment Variable</DialogTitle>
               <DialogContent>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
-                  <Field label="文件或目录路径" required>
+                  <Field label="File or Directory Path" required>
                     <div style={{ 
                       display: 'flex', 
                       flexDirection: 'column', 
@@ -710,29 +710,29 @@ function App() {
                       border: '1px solid #e5e7eb'
                     }}>
                       <Text size="300" style={{ color: '#666', marginBottom: '8px' }}>
-                        💡 输入或选择要添加到系统PATH的文件/目录路径
+                        💡 Enter or select the file/directory path to add to the system PATH
                       </Text>
                       
                       <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                         <Input
                           value={envPath}
                           onChange={(e) => setEnvPath(e.target.value)}
-                          placeholder="例如: C:\Program Files\MyApp\bin"
+                          placeholder="e.g., C:\Program Files\MyApp\bin"
                           style={{ flex: 1 }}
                           className="win11-input"
                         />
                         <div style={{ display: 'flex', gap: '4px' }}>
-                          <Tooltip content="选择可执行文件（自动提取目录）" relationship="label">
+                          <Tooltip content="Select executable file (extracts directory automatically)" relationship="label">
                             <Button 
                               icon={<Document24Regular />} 
                               onClick={handleSelectEnvFile}
                               className="win11-button"
                               size="small"
                             >
-                              文件
+                              File
                             </Button>
                           </Tooltip>
-                          <Tooltip content="直接选择目录" relationship="label">
+                          <Tooltip content="Select directory directly" relationship="label">
                             <Button 
                               icon={<Folder24Regular />} 
                               onClick={handleSelectEnvDirectory}
@@ -740,7 +740,7 @@ function App() {
                               size="small"
                               appearance="secondary"
                             >
-                              目录
+                              Directory
                             </Button>
                           </Tooltip>
                         </div>
@@ -754,15 +754,15 @@ function App() {
                         borderRadius: '6px',
                         border: '1px solid #e9ecef'
                       }}>
-                        <div><strong>功能介绍：</strong></div>
-                        <div><strong>说明：</strong>方便快捷的将程序添加到系统变量</div>
-                        <div><strong>使用：</strong>支持手动输入路径，支持选择程序或者选择目录</div>
-                        <div><strong>效果：</strong>快速将路径将添加到系统级PATH，重新打开终端即可使用</div>
+                        <div><strong>Function:</strong></div>
+                        <div><strong>Description:</strong> Quickly add programs to system variables</div>
+                        <div><strong>Usage:</strong> Supports manual path entry or selection of a program/directory</div>
+                        <div><strong>Effect:</strong> Path is added to the system PATH; it becomes available in new terminal windows</div>
                       </div>
                     </div>
                   </Field>
 
-                  <Field label="快捷操作">
+                  <Field label="Quick Actions">
                     <div style={{ 
                       display: 'flex', 
                       gap: '12px',
@@ -777,7 +777,7 @@ function App() {
                         className="win11-button"
                         size="small"
                       >
-                        打开系统环境变量设置界面
+                        Open System Environment Settings
                       </Button>
                     </div>
                   </Field>
@@ -792,7 +792,7 @@ function App() {
                   }}
                   className="win11-button"
                 >
-                  取消
+                  Cancel
                 </Button>
                 <Button 
                   appearance="primary" 
@@ -800,7 +800,7 @@ function App() {
                   disabled={!envPath.trim() || isAddingEnv}
                   className="win11-button"
                 >
-                  {isAddingEnv ? '添加中...' : '添加到PATH'}
+                  {isAddingEnv ? 'Adding...' : 'Add to PATH'}
                 </Button>
               </DialogActions>
             </DialogBody>
@@ -815,14 +815,14 @@ function App() {
               alignItems: 'center',
               marginBottom: '16px'
             }}>
-              <Text size="300" weight="semibold">服务列表</Text>
+              <Text size="300" weight="semibold">Service List</Text>
               <Button 
                 appearance="subtle" 
                 icon={<ArrowClockwise24Regular />}
                 onClick={loadServices}
                 className="win11-button"
               >
-                刷新
+                Refresh
               </Button>
             </div>
             
@@ -830,8 +830,8 @@ function App() {
               <div className="empty-state">
                 <div className="empty-state-icon">⚙️</div>
                 <div className="empty-state-text">
-                  暂无服务<br />
-                  点击右上角"添加服务"按钮开始创建服务
+                  No services<br />
+                  Click the "Add Service" button in the top right to get started
                 </div>
               </div>
             ) : (
@@ -864,25 +864,25 @@ function App() {
 
         <div className="status-bar">
           <Text size="200">
-            总计服务: {serviceStats.total} | 
-            运行中: {serviceStats.running} | 
-            已停止: {serviceStats.stopped}
-            {adminPrivileges ? ' | 管理员权限' : ' | 普通权限'}
+            Total services: {serviceStats.total} | 
+            Running: {serviceStats.running} | 
+            Stopped: {serviceStats.stopped}
+            {adminPrivileges ? ' | Administrator' : ' | Standard user'}
           </Text>
         </div>
       </div>
 
-      {/* 删除确认对话框 */}
+      {/* Delete Confirmation Dialog */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={(_, data) => setIsDeleteDialogOpen(data.open)}>
         <DialogSurface>
           <DialogBody>
-            <DialogTitle>确认删除服务</DialogTitle>
+            <DialogTitle>Confirm Delete Service</DialogTitle>
             <DialogContent>
               <Text>
-                确定要删除服务 "{serviceToDelete?.name}" 吗？
+                Are you sure you want to delete the service "{serviceToDelete?.name}"?
               </Text>
               <Text style={{ marginTop: '8px', color: '#d13438' }}>
-                服务将被删除！
+                This service will be permanently removed!
               </Text>
             </DialogContent>
             <DialogActions>
@@ -890,14 +890,14 @@ function App() {
                 appearance="secondary" 
                 onClick={() => setIsDeleteDialogOpen(false)}
               >
-                取消
+                Cancel
               </Button>
               <Button 
                 appearance="primary" 
                 onClick={confirmDeleteService}
                 style={{ backgroundColor: '#d13438', borderColor: '#d13438' }}
               >
-                删除
+                Delete
               </Button>
             </DialogActions>
           </DialogBody>

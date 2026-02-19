@@ -15,7 +15,7 @@ import (
 	"golang.org/x/sys/windows/svc/debug"
 )
 
-// EmbeddedServiceWrapper 内置服务包装器
+// EmbeddedServiceWrapper built-in service wrapper
 type EmbeddedServiceWrapper struct {
 	serviceName string
 	config      ServiceConfig
@@ -23,7 +23,7 @@ type EmbeddedServiceWrapper struct {
 	isRunning   bool
 }
 
-// NewEmbeddedServiceWrapper 创建内置服务包装器
+// NewEmbeddedServiceWrapper creates a built-in service wrapper
 func NewEmbeddedServiceWrapper(serviceName string, config ServiceConfig) *EmbeddedServiceWrapper {
 	return &EmbeddedServiceWrapper{
 		serviceName: serviceName,
@@ -32,21 +32,21 @@ func NewEmbeddedServiceWrapper(serviceName string, config ServiceConfig) *Embedd
 	}
 }
 
-// Execute 实现Windows服务接口
+// Execute implements the Windows service interface
 func (esw *EmbeddedServiceWrapper) Execute(args []string, r <-chan svc.ChangeRequest, s chan<- svc.Status) (bool, uint32) {
-	log.Printf("EmbeddedServiceWrapper 开始执行服务: %s", esw.serviceName)
+	log.Printf("EmbeddedServiceWrapper starting service: %s", esw.serviceName)
 
 	s <- svc.Status{State: svc.StartPending}
 
 	err := esw.startTargetProcess()
 	if err != nil {
-		log.Printf("启动目标程序失败: %v", err)
+		log.Printf("Failed to start target process: %v", err)
 		s <- svc.Status{State: svc.Stopped}
 		return false, 1
 	}
 
 	s <- svc.Status{State: svc.Running, Accepts: svc.AcceptStop | svc.AcceptShutdown}
-	log.Printf("服务已启动，目标程序PID: %d", esw.process.Process.Pid)
+	log.Printf("Service started, target process PID: %d", esw.process.Process.Pid)
 
 	go esw.monitorTargetProcess()
 
@@ -55,7 +55,7 @@ func (esw *EmbeddedServiceWrapper) Execute(args []string, r <-chan svc.ChangeReq
 		case c := <-r:
 			switch c.Cmd {
 			case svc.Stop, svc.Shutdown:
-				log.Printf("服务接收到停止信号: %s", esw.serviceName)
+				log.Printf("Service received stop signal: %s", esw.serviceName)
 				s <- svc.Status{State: svc.StopPending}
 				esw.stopTargetProcess()
 				s <- svc.Status{State: svc.Stopped}
@@ -63,11 +63,11 @@ func (esw *EmbeddedServiceWrapper) Execute(args []string, r <-chan svc.ChangeReq
 			case svc.Interrogate:
 				s <- c.CurrentStatus
 			default:
-				log.Printf("服务接收到未知命令: %v", c.Cmd)
+				log.Printf("Service received unknown command: %v", c.Cmd)
 			}
 		default:
 			if !esw.isRunning {
-				log.Printf("目标程序已退出，停止服务: %s", esw.serviceName)
+				log.Printf("Target process exited, stopping service: %s", esw.serviceName)
 				s <- svc.Status{State: svc.Stopped}
 				return false, 0
 			}
@@ -76,7 +76,7 @@ func (esw *EmbeddedServiceWrapper) Execute(args []string, r <-chan svc.ChangeReq
 	}
 }
 
-// startTargetProcess 启动目标程序
+// startTargetProcess starts the target program
 func (esw *EmbeddedServiceWrapper) startTargetProcess() error {
 	var args []string
 	if esw.config.Args != "" {
@@ -97,84 +97,84 @@ func (esw *EmbeddedServiceWrapper) startTargetProcess() error {
 
 	err := esw.process.Start()
 	if err != nil {
-		return fmt.Errorf("启动目标程序失败: %v", err)
+		return fmt.Errorf("failed to start target process: %v", err)
 	}
 
 	esw.isRunning = true
-	log.Printf("目标程序已启动: %s，PID: %d", esw.config.ExePath, esw.process.Process.Pid)
+	log.Printf("Target process started: %s, PID: %d", esw.config.ExePath, esw.process.Process.Pid)
 	return nil
 }
 
-// stopTargetProcess 停止目标程序
+// stopTargetProcess stops the target program
 func (esw *EmbeddedServiceWrapper) stopTargetProcess() {
 	if esw.process != nil && esw.isRunning {
-		log.Printf("正在停止目标程序，PID: %d", esw.process.Process.Pid)
+		log.Printf("Stopping target process, PID: %d", esw.process.Process.Pid)
 
 		esw.process.Process.Kill()
 
 		esw.process.Wait()
 		esw.isRunning = false
-		log.Printf("目标程序已停止")
+		log.Printf("Target process stopped")
 	}
 }
 
-// monitorTargetProcess 监控目标程序
+// monitorTargetProcess monitors the target process
 func (esw *EmbeddedServiceWrapper) monitorTargetProcess() {
 	if esw.process != nil {
 		esw.process.Wait()
 		esw.isRunning = false
-		log.Printf("目标程序已退出: %s", esw.config.ExePath)
+		log.Printf("Target process exited: %s", esw.config.ExePath)
 	}
 }
 
-// RunAsWindowsService 将程序作为Windows服务运行（内置包装器模式）
+// RunAsWindowsService runs the program as a Windows service (built-in wrapper mode)
 func RunAsWindowsService(serviceName string, config ServiceConfig) error {
 	wrapper := NewEmbeddedServiceWrapper(serviceName, config)
 
 	isService, err := svc.IsWindowsService()
 	if err != nil {
-		return fmt.Errorf("检查服务状态失败: %v", err)
+		return fmt.Errorf("failed to check service status: %v", err)
 	}
 
 	if isService {
-		log.Printf("作为Windows服务运行: %s", serviceName)
+		log.Printf("Running as Windows service: %s", serviceName)
 		err = svc.Run(serviceName, wrapper)
 		if err != nil {
-			return fmt.Errorf("服务运行失败: %v", err)
+			return fmt.Errorf("service run failed: %v", err)
 		}
 	} else {
-		log.Printf("调试模式运行: %s", serviceName)
+		log.Printf("Running in debug mode: %s", serviceName)
 		err = debug.Run(serviceName, wrapper)
 		if err != nil {
-			return fmt.Errorf("调试运行失败: %v", err)
+			return fmt.Errorf("debug run failed: %v", err)
 		}
 	}
 
 	return nil
 }
 
-// IsServiceWrapperMode 检查是否以服务包装器模式运行
+// IsServiceWrapperMode checks if running in service wrapper mode
 func IsServiceWrapperMode() (bool, string) {
 	args := os.Args
 	if len(args) >= 3 && args[1] == "--service-wrapper" {
-		return true, args[2] // 返回服务名
+		return true, args[2] // return service name
 	}
 	return false, ""
 }
 
-// LoadServiceConfigFromRegistry 从注册表加载服务配置
+// LoadServiceConfigFromRegistry loads service configuration from registry
 func LoadServiceConfigFromRegistry(serviceName string) (*ServiceConfig, error) {
 	keyPath := fmt.Sprintf(`SYSTEM\CurrentControlSet\Services\%s\Parameters`, serviceName)
 
 	key, err := registry.OpenKey(registry.LOCAL_MACHINE, keyPath, registry.READ)
 	if err != nil {
-		return nil, fmt.Errorf("打开服务配置注册表失败: %v", err)
+		return nil, fmt.Errorf("failed to open service configuration registry: %v", err)
 	}
 	defer key.Close()
 
 	exePath, _, err := key.GetStringValue("ExePath")
 	if err != nil {
-		return nil, fmt.Errorf("读取ExePath失败: %v", err)
+		return nil, fmt.Errorf("failed to read ExePath: %v", err)
 	}
 
 	args, _, err := key.GetStringValue("Args")

@@ -12,20 +12,20 @@ import (
 	"golang.org/x/sys/windows/registry"
 )
 
-// EnvironmentManager 环境变量管理器
+// EnvironmentManager manages environment variables
 type EnvironmentManager struct{}
 
 func NewEnvironmentManager() *EnvironmentManager {
 	return &EnvironmentManager{}
 }
 
-// AddSystemEnvironmentVariable 添加系统级环境变量
+// AddSystemEnvironmentVariable adds a system-level environment variable
 func (em *EnvironmentManager) AddSystemEnvironmentVariable(varName, varValue string) error {
-	key, err := registry.OpenKey(registry.LOCAL_MACHINE, 
-		`SYSTEM\CurrentControlSet\Control\Session Manager\Environment`, 
+	key, err := registry.OpenKey(registry.LOCAL_MACHINE,
+		`SYSTEM\CurrentControlSet\Control\Session Manager\Environment`,
 		registry.ALL_ACCESS)
 	if err != nil {
-		return fmt.Errorf("无法打开系统环境变量注册表 (需要管理员权限): %v", err)
+		return fmt.Errorf("cannot open system environment registry (administrator rights required): %v", err)
 	}
 	defer key.Close()
 
@@ -36,25 +36,25 @@ func (em *EnvironmentManager) AddSystemEnvironmentVariable(varName, varValue str
 		valueType = registry.SZ
 	}
 
-	// 如果是PATH变量，需要特殊处理
+	// Special handling for PATH variable
 	if strings.ToUpper(varName) == "PATH" {
 		var existingPath string
 		var readErr error
-		
+
 		existingPath, _, readErr = key.GetStringValue("PATH")
 		if readErr != nil && readErr != registry.ErrNotExist {
-			return fmt.Errorf("无法读取现有PATH变量: %v", readErr)
+			return fmt.Errorf("cannot read existing PATH variable: %v", readErr)
 		}
-		
+
 		if existingPath != "" {
 			pathEntries := strings.Split(existingPath, ";")
 			for _, entry := range pathEntries {
 				if strings.EqualFold(strings.TrimSpace(entry), strings.TrimSpace(varValue)) {
-					return fmt.Errorf("PATH中已存在该路径: %s", varValue)
+					return fmt.Errorf("path already exists in PATH: %s", varValue)
 				}
 			}
 		}
-		
+
 		if existingPath != "" {
 			if !strings.HasSuffix(existingPath, ";") {
 				varValue = existingPath + ";" + varValue
@@ -64,32 +64,32 @@ func (em *EnvironmentManager) AddSystemEnvironmentVariable(varName, varValue str
 		}
 	}
 
-	// 设置注册表值
+	// Set registry value
 	if valueType == registry.EXPAND_SZ {
 		err = key.SetExpandStringValue(varName, varValue)
 	} else {
 		err = key.SetStringValue(varName, varValue)
 	}
-	
+
 	if err != nil {
-		return fmt.Errorf("无法设置环境变量: %v", err)
+		return fmt.Errorf("cannot set environment variable: %v", err)
 	}
 
-	// 立即通知系统环境变量已更改
+	// Immediately notify system that environment variable has changed
 	err = em.broadcastEnvironmentChange()
 	if err != nil {
-		return fmt.Errorf("环境变量设置成功，但通知系统失败: %v", err)
+		return fmt.Errorf("environment variable set successfully, but failed to notify system: %v", err)
 	}
 
 	return nil
 }
 
-// AddPathVariable 专门用于添加PATH环境变量
+// AddPathVariable specifically adds a PATH environment variable
 func (em *EnvironmentManager) AddPathVariable(pathValue string) error {
 	pathValue = strings.Trim(pathValue, "\"")
-	
+
 	if !filepath.IsAbs(pathValue) {
-		return fmt.Errorf("必须提供绝对路径")
+		return fmt.Errorf("absolute path must be provided")
 	}
 
 	if strings.HasSuffix(strings.ToLower(pathValue), ".exe") {
@@ -99,7 +99,7 @@ func (em *EnvironmentManager) AddPathVariable(pathValue string) error {
 	return em.AddSystemEnvironmentVariable("PATH", pathValue)
 }
 
-// broadcastEnvironmentChange 广播环境变量更改消息
+// broadcastEnvironmentChange broadcasts environment change message
 func (em *EnvironmentManager) broadcastEnvironmentChange() error {
 	const (
 		HWND_BROADCAST   = 0xffff
@@ -118,24 +118,24 @@ func (em *EnvironmentManager) broadcastEnvironmentChange() error {
 		0,
 		uintptr(unsafe.Pointer(environmentPtr)),
 		uintptr(SMTO_ABORTIFHUNG),
-		uintptr(5000), // 5秒超时
+		uintptr(5000), // 5 second timeout
 		uintptr(0),
 	)
 
 	if ret == 0 {
-		return fmt.Errorf("广播环境变量更改失败: %v", err)
+		return fmt.Errorf("failed to broadcast environment change: %v", err)
 	}
 
 	return nil
 }
 
-// OpenSystemEnvironmentSettings 打开系统环境变量设置
+// OpenSystemEnvironmentSettings opens system environment settings
 func (em *EnvironmentManager) OpenSystemEnvironmentSettings() error {
 	cmd := exec.Command("rundll32.exe", "sysdm.cpl,EditEnvironmentVariables")
 	return cmd.Start()
 }
 
-// ValidatePathExists 验证路径是否存在
+// ValidatePathExists validates whether a path exists
 func (em *EnvironmentManager) ValidatePathExists(path string) bool {
 	path = strings.Trim(path, "\"")
 	if _, err := windows.GetFileAttributes(windows.StringToUTF16Ptr(path)); err != nil {
@@ -144,33 +144,33 @@ func (em *EnvironmentManager) ValidatePathExists(path string) bool {
 	return true
 }
 
-// GetSystemEnvironmentVariable 获取系统环境变量值
+// GetSystemEnvironmentVariable gets a system environment variable value
 func (em *EnvironmentManager) GetSystemEnvironmentVariable(varName string) (string, error) {
-	key, err := registry.OpenKey(registry.LOCAL_MACHINE, 
-		`SYSTEM\CurrentControlSet\Control\Session Manager\Environment`, 
+	key, err := registry.OpenKey(registry.LOCAL_MACHINE,
+		`SYSTEM\CurrentControlSet\Control\Session Manager\Environment`,
 		registry.QUERY_VALUE)
 	if err != nil {
-		return "", fmt.Errorf("无法打开系统环境变量注册表: %v", err)
+		return "", fmt.Errorf("cannot open system environment registry: %v", err)
 	}
 	defer key.Close()
 
 	value, _, err := key.GetStringValue(varName)
 	if err != nil {
 		if err == registry.ErrNotExist {
-			return "", fmt.Errorf("环境变量不存在: %s", varName)
+			return "", fmt.Errorf("environment variable does not exist: %s", varName)
 		}
-		return "", fmt.Errorf("无法读取环境变量: %v", err)
+		return "", fmt.Errorf("cannot read environment variable: %v", err)
 	}
 
 	return value, nil
 }
 
-// DiagnoseEnvironmentAccess 诊断环境变量访问权限
+// DiagnoseEnvironmentAccess diagnoses environment variable access permissions
 func (em *EnvironmentManager) DiagnoseEnvironmentAccess() (map[string]interface{}, error) {
 	result := make(map[string]interface{})
-	
-	key, err := registry.OpenKey(registry.LOCAL_MACHINE, 
-		`SYSTEM\CurrentControlSet\Control\Session Manager\Environment`, 
+
+	key, err := registry.OpenKey(registry.LOCAL_MACHINE,
+		`SYSTEM\CurrentControlSet\Control\Session Manager\Environment`,
 		registry.QUERY_VALUE)
 	if err != nil {
 		result["registry_read"] = false
@@ -179,9 +179,9 @@ func (em *EnvironmentManager) DiagnoseEnvironmentAccess() (map[string]interface{
 		result["registry_read"] = true
 		key.Close()
 	}
-	
-	key, err = registry.OpenKey(registry.LOCAL_MACHINE, 
-		`SYSTEM\CurrentControlSet\Control\Session Manager\Environment`, 
+
+	key, err = registry.OpenKey(registry.LOCAL_MACHINE,
+		`SYSTEM\CurrentControlSet\Control\Session Manager\Environment`,
 		registry.SET_VALUE)
 	if err != nil {
 		result["registry_write"] = false
@@ -190,9 +190,9 @@ func (em *EnvironmentManager) DiagnoseEnvironmentAccess() (map[string]interface{
 		result["registry_write"] = true
 		key.Close()
 	}
-	
-	key, err = registry.OpenKey(registry.LOCAL_MACHINE, 
-		`SYSTEM\CurrentControlSet\Control\Session Manager\Environment`, 
+
+	key, err = registry.OpenKey(registry.LOCAL_MACHINE,
+		`SYSTEM\CurrentControlSet\Control\Session Manager\Environment`,
 		registry.ALL_ACCESS)
 	if err != nil {
 		result["registry_full"] = false
@@ -201,7 +201,7 @@ func (em *EnvironmentManager) DiagnoseEnvironmentAccess() (map[string]interface{
 		result["registry_full"] = true
 		key.Close()
 	}
-	
+
 	pathValue, err := em.GetSystemEnvironmentVariable("PATH")
 	if err != nil {
 		result["path_read"] = false
@@ -210,6 +210,6 @@ func (em *EnvironmentManager) DiagnoseEnvironmentAccess() (map[string]interface{
 		result["path_read"] = true
 		result["path_length"] = len(pathValue)
 	}
-	
+
 	return result, nil
 }

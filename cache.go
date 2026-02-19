@@ -5,29 +5,29 @@ import (
 	"time"
 )
 
-// ServiceStatusCache 服务状态缓存，减少SCM查询次数
+// ServiceStatusCache caches service statuses to reduce SCM query frequency
 type ServiceStatusCache struct {
 	cache map[string]*CachedServiceStatus
 	mutex sync.RWMutex
 	ttl   time.Duration
 }
 
-// CachedServiceStatus 缓存的服务状态
+// CachedServiceStatus represents a cached service status
 type CachedServiceStatus struct {
 	Status    string
 	PID       int
 	Timestamp time.Time
 }
 
-// NewServiceStatusCache 创建新的服务状态缓存
+// NewServiceStatusCache creates a new service status cache
 func NewServiceStatusCache() *ServiceStatusCache {
 	return &ServiceStatusCache{
 		cache: make(map[string]*CachedServiceStatus),
-		ttl:   5 * time.Second, // 5秒缓存有效期
+		ttl:   5 * time.Second, // cache TTL: 5 seconds
 	}
 }
 
-// Get 获取缓存的服务状态
+// Get retrieves a cached service status
 func (cache *ServiceStatusCache) Get(serviceName string) (*CachedServiceStatus, bool) {
 	cache.mutex.RLock()
 	defer cache.mutex.RUnlock()
@@ -44,7 +44,7 @@ func (cache *ServiceStatusCache) Get(serviceName string) (*CachedServiceStatus, 
 	return status, true
 }
 
-// Set 设置服务状态缓存
+// Set stores a service status in the cache
 func (cache *ServiceStatusCache) Set(serviceName string, status string, pid int) {
 	cache.mutex.Lock()
 	defer cache.mutex.Unlock()
@@ -56,7 +56,7 @@ func (cache *ServiceStatusCache) Set(serviceName string, status string, pid int)
 	}
 }
 
-// Remove 移除服务状态缓存
+// Remove deletes a service status from the cache
 func (cache *ServiceStatusCache) Remove(serviceName string) {
 	cache.mutex.Lock()
 	defer cache.mutex.Unlock()
@@ -64,7 +64,7 @@ func (cache *ServiceStatusCache) Remove(serviceName string) {
 	delete(cache.cache, serviceName)
 }
 
-// Clear 清空所有缓存
+// Clear empties the entire cache
 func (cache *ServiceStatusCache) Clear() {
 	cache.mutex.Lock()
 	defer cache.mutex.Unlock()
@@ -72,7 +72,7 @@ func (cache *ServiceStatusCache) Clear() {
 	cache.cache = make(map[string]*CachedServiceStatus)
 }
 
-// CleanExpired 清理过期的缓存项
+// CleanExpired removes expired cache entries
 func (cache *ServiceStatusCache) CleanExpired() {
 	cache.mutex.Lock()
 	defer cache.mutex.Unlock()
@@ -85,7 +85,7 @@ func (cache *ServiceStatusCache) CleanExpired() {
 	}
 }
 
-// StartCleanupRoutine 启动定期清理过期缓存的协程
+// StartCleanupRoutine starts a goroutine that periodically cleans expired cache entries
 func (cache *ServiceStatusCache) StartCleanupRoutine() {
 	go func() {
 		ticker := time.NewTicker(30 * time.Second)

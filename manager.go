@@ -17,7 +17,7 @@ import (
 	"golang.org/x/sys/windows/svc/mgr"
 )
 
-// WindowsServiceManager 使用Windows Service Control Manager API管理服务
+// WindowsServiceManager manages services using the Windows Service Control Manager API
 type WindowsServiceManager struct {
 	mutex       sync.RWMutex
 	dataFile    string
@@ -26,7 +26,7 @@ type WindowsServiceManager struct {
 	ctx         context.Context
 }
 
-// NewWindowsServiceManager 创建新的Windows服务管理器
+// NewWindowsServiceManager creates a new Windows service manager
 func NewWindowsServiceManager() *WindowsServiceManager {
 	cache := NewServiceStatusCache()
 	cache.StartCleanupRoutine()
@@ -38,12 +38,12 @@ func NewWindowsServiceManager() *WindowsServiceManager {
 	}
 }
 
-// SetContext 设置上下文用于事件发射
+// SetContext sets the context for emitting events
 func (wsm *WindowsServiceManager) SetContext(ctx context.Context) {
 	wsm.ctx = ctx
 }
 
-// emitServiceStatusChanged 发射服务状态变化事件
+// emitServiceStatusChanged emits a service status change event
 func (wsm *WindowsServiceManager) emitServiceStatusChanged(serviceID, status string, pid int) {
 	if wsm.ctx != nil {
 		runtime.EventsEmit(wsm.ctx, "service-status-changed", map[string]interface{}{
@@ -54,7 +54,7 @@ func (wsm *WindowsServiceManager) emitServiceStatusChanged(serviceID, status str
 	}
 }
 
-// emitServicesUpdated 发射服务列表更新事件
+// emitServicesUpdated emits a service list update event
 func (wsm *WindowsServiceManager) emitServicesUpdated() {
 	if wsm.ctx != nil {
 		services := make([]*Service, 0, len(wsm.services))
@@ -65,30 +65,30 @@ func (wsm *WindowsServiceManager) emitServicesUpdated() {
 	}
 }
 
-// connectSCM 连接到Windows服务控制管理器
+// connectSCM connects to the Windows Service Control Manager
 func (wsm *WindowsServiceManager) connectSCM() (*mgr.Mgr, error) {
 	return mgr.Connect()
 }
 
-// withSCM 使用SCM执行操作的辅助函数
+// withSCM is a helper to perform operations using SCM
 func (wsm *WindowsServiceManager) withSCM(operation func(*mgr.Mgr) error) error {
 	scm, err := wsm.connectSCM()
 	if err != nil {
-		return fmt.Errorf("连接服务控制管理器失败: %v", err)
+		return fmt.Errorf("failed to connect to service control manager: %v", err)
 	}
 	defer scm.Disconnect()
 
 	return operation(scm)
 }
 
-// waitForServiceState 等待服务达到指定状态
+// waitForServiceState waits for a service to reach a specific state
 func (wsm *WindowsServiceManager) waitForServiceState(windowsService *mgr.Service, targetState svc.State, timeout time.Duration) error {
 	deadline := time.Now().Add(timeout)
 
 	for time.Now().Before(deadline) {
 		status, err := windowsService.Query()
 		if err != nil {
-			return fmt.Errorf("查询服务状态失败: %v", err)
+			return fmt.Errorf("failed to query service status: %v", err)
 		}
 
 		if status.State == targetState {
@@ -96,16 +96,16 @@ func (wsm *WindowsServiceManager) waitForServiceState(windowsService *mgr.Servic
 		}
 
 		if targetState == svc.Running && status.State == svc.Stopped {
-			return fmt.Errorf("服务启动失败")
+			return fmt.Errorf("service failed to start")
 		}
 
 		time.Sleep(500 * time.Millisecond)
 	}
 
-	return fmt.Errorf("等待服务状态超时")
+	return fmt.Errorf("timeout waiting for service state")
 }
 
-// setServiceRegistryValue 通用的服务注册表值设置函数
+// setServiceRegistryValue sets a registry value for a service
 func (wsm *WindowsServiceManager) setServiceRegistryValue(serviceName, subKey, valueName, value string) error {
 	keyPath := fmt.Sprintf(`SYSTEM\CurrentControlSet\Services\%s`, serviceName)
 	if subKey != "" {
@@ -118,77 +118,77 @@ func (wsm *WindowsServiceManager) setServiceRegistryValue(serviceName, subKey, v
 	if subKey != "" {
 		parentKey, err := registry.OpenKey(registry.LOCAL_MACHINE, fmt.Sprintf(`SYSTEM\CurrentControlSet\Services\%s`, serviceName), registry.SET_VALUE)
 		if err != nil {
-			return fmt.Errorf("打开服务注册表键失败: %v", err)
+			return fmt.Errorf("failed to open service registry key: %v", err)
 		}
 		defer parentKey.Close()
 
 		key, _, err = registry.CreateKey(parentKey, subKey, registry.SET_VALUE)
 		if err != nil {
-			return fmt.Errorf("创建注册表子键失败: %v", err)
+			return fmt.Errorf("failed to create registry subkey: %v", err)
 		}
 	} else {
 		key, err = registry.OpenKey(registry.LOCAL_MACHINE, keyPath, registry.SET_VALUE)
 		if err != nil {
-			return fmt.Errorf("打开服务注册表键失败: %v", err)
+			return fmt.Errorf("failed to open service registry key: %v", err)
 		}
 	}
 	defer key.Close()
 
 	err = key.SetStringValue(valueName, value)
 	if err != nil {
-		return fmt.Errorf("设置注册表值失败: %v", err)
+		return fmt.Errorf("failed to set registry value: %v", err)
 	}
 
 	return nil
 }
 
-// setServiceWorkingDirectory 通过注册表设置服务的工作目录
+// setServiceWorkingDirectory sets the working directory for a service via registry
 func (wsm *WindowsServiceManager) setServiceWorkingDirectory(serviceName, workingDir string) error {
 	return wsm.setServiceRegistryValue(serviceName, "Parameters", "AppDirectory", workingDir)
 }
 
-// setServiceImagePathDirect 直接设置服务的ImagePath值
+// setServiceImagePathDirect directly sets the ImagePath value of a service
 func (wsm *WindowsServiceManager) setServiceImagePathDirect(serviceName, imagePath string) error {
 	return wsm.setServiceRegistryValue(serviceName, "", "ImagePath", imagePath)
 }
 
-// createServiceWrapper 设置内置服务包装器（使用当前程序+参数模式）
+// createServiceWrapper sets up the built-in service wrapper (using current program + arguments mode)
 func (wsm *WindowsServiceManager) createServiceWrapper(serviceName, exePath, args, workingDir string) (string, error) {
 	currentExe, err := os.Executable()
 	if err != nil {
-		return "", fmt.Errorf("获取当前可执行文件路径失败: %v", err)
+		return "", fmt.Errorf("failed to get current executable path: %v", err)
 	}
 
 	err = wsm.storeServiceConfigInRegistry(serviceName, exePath, args, workingDir)
 	if err != nil {
-		return "", fmt.Errorf("存储服务配置失败: %v", err)
+		return "", fmt.Errorf("failed to store service configuration: %v", err)
 	}
 
 	return fmt.Sprintf(`"%s" --service-wrapper %s`, currentExe, serviceName), nil
 }
 
-// storeServiceConfigInRegistry 将服务配置存储到注册表
+// storeServiceConfigInRegistry stores service configuration in the registry
 func (wsm *WindowsServiceManager) storeServiceConfigInRegistry(serviceName, exePath, args, workingDir string) error {
 	if err := wsm.setServiceRegistryValue(serviceName, "Parameters", "ExePath", exePath); err != nil {
-		return fmt.Errorf("设置ExePath失败: %v", err)
+		return fmt.Errorf("failed to set ExePath: %v", err)
 	}
 
 	if args != "" {
 		if err := wsm.setServiceRegistryValue(serviceName, "Parameters", "Args", args); err != nil {
-			return fmt.Errorf("设置Args失败: %v", err)
+			return fmt.Errorf("failed to set Args: %v", err)
 		}
 	}
 
 	if workingDir != "" {
 		if err := wsm.setServiceRegistryValue(serviceName, "Parameters", "WorkingDir", workingDir); err != nil {
-			return fmt.Errorf("设置WorkingDir失败: %v", err)
+			return fmt.Errorf("failed to set WorkingDir: %v", err)
 		}
 	}
 
 	return nil
 }
 
-// GetServices 获取所有由我们管理的服务
+// GetServices returns all services managed by us
 func (wsm *WindowsServiceManager) GetServices() ([]*Service, error) {
 	wsm.mutex.RLock()
 	defer wsm.mutex.RUnlock()
@@ -216,19 +216,19 @@ func (wsm *WindowsServiceManager) GetServices() ([]*Service, error) {
 	return services, nil
 }
 
-// CreateService 使用Windows SCM创建系统服务
+// CreateService creates a system service using Windows SCM
 func (wsm *WindowsServiceManager) CreateService(config ServiceConfig) (*Service, error) {
 	wsm.mutex.Lock()
 	defer wsm.mutex.Unlock()
 
 	if _, err := os.Stat(config.ExePath); os.IsNotExist(err) {
-		return nil, fmt.Errorf("可执行文件不存在: %s", config.ExePath)
+		return nil, fmt.Errorf("executable does not exist: %s", config.ExePath)
 	}
 
 	serviceName := wsm.generateServiceName(config.Name)
 
 	if _, exists := wsm.services[serviceName]; exists {
-		return nil, fmt.Errorf("服务名称已存在: %s", serviceName)
+		return nil, fmt.Errorf("service name already exists: %s", serviceName)
 	}
 
 	workingDir := config.WorkingDir
@@ -244,7 +244,7 @@ func (wsm *WindowsServiceManager) CreateService(config ServiceConfig) (*Service,
 			StartType:    mgr.StartAutomatic,
 			ErrorControl: mgr.ErrorNormal,
 			DisplayName:  config.Name,
-			Description:  fmt.Sprintf("由Windows服务管理器创建的服务: %s", config.Name),
+			Description:  fmt.Sprintf("Service created by Windows Service Manager: %s", config.Name),
 		}
 
 		binaryPath := config.ExePath
@@ -254,25 +254,25 @@ func (wsm *WindowsServiceManager) CreateService(config ServiceConfig) (*Service,
 
 		windowsService, err := scm.CreateService(serviceName, binaryPath, serviceConfig)
 		if err != nil {
-			return fmt.Errorf("创建Windows服务失败: %v", err)
+			return fmt.Errorf("failed to create Windows service: %v", err)
 		}
 		defer windowsService.Close()
 
 		wrapperPath, err := wsm.createServiceWrapper(serviceName, config.ExePath, config.Args, workingDir)
 		if err != nil {
 			windowsService.Delete()
-			return fmt.Errorf("创建服务包装器失败: %v", err)
+			return fmt.Errorf("failed to create service wrapper: %v", err)
 		}
 
 		err = wsm.setServiceImagePathDirect(serviceName, wrapperPath)
 		if err != nil {
 			windowsService.Delete()
-			return fmt.Errorf("设置服务路径失败: %v", err)
+			return fmt.Errorf("failed to set service path: %v", err)
 		}
 
 		err = wsm.setServiceWorkingDirectory(serviceName, workingDir)
 		if err != nil {
-			fmt.Printf("警告：设置工作目录失败: %v\n", err)
+			fmt.Printf("Warning: failed to set working directory: %v\n", err)
 		}
 
 		service = &Service{
@@ -298,10 +298,10 @@ func (wsm *WindowsServiceManager) CreateService(config ServiceConfig) (*Service,
 	wsm.services[serviceName] = service
 	wsm.saveServices()
 	
-	// 发射服务列表更新事件
+	// Emit service list update event
 	wsm.emitServicesUpdated()
 	
-	// 自动启动服务
+	// Auto-start the service
 	go func() {
 		time.Sleep(1 * time.Second)
 		wsm.StartService(serviceName)
@@ -310,35 +310,35 @@ func (wsm *WindowsServiceManager) CreateService(config ServiceConfig) (*Service,
 	return service, nil
 }
 
-// StartService 启动Windows服务
+// StartService starts a Windows service
 func (wsm *WindowsServiceManager) StartService(serviceID string) error {
 	wsm.mutex.Lock()
 	defer wsm.mutex.Unlock()
 
 	service, exists := wsm.services[serviceID]
 	if !exists {
-		return fmt.Errorf("服务不存在: %s", serviceID)
+		return fmt.Errorf("service does not exist: %s", serviceID)
 	}
 
 	return wsm.withSCM(func(scm *mgr.Mgr) error {
 		windowsService, err := scm.OpenService(serviceID)
 		if err != nil {
-			return fmt.Errorf("打开服务失败: %v", err)
+			return fmt.Errorf("failed to open service: %v", err)
 		}
 		defer windowsService.Close()
 
 		status, err := windowsService.Query()
 		if err != nil {
-			return fmt.Errorf("查询服务状态失败: %v", err)
+			return fmt.Errorf("failed to query service status: %v", err)
 		}
 
 		if status.State == svc.Running {
-			return fmt.Errorf("服务已经在运行")
+			return fmt.Errorf("service is already running")
 		}
 
 		err = windowsService.Start()
 		if err != nil {
-			return fmt.Errorf("启动服务失败: %v", err)
+			return fmt.Errorf("failed to start service: %v", err)
 		}
 
 		err = wsm.waitForServiceState(windowsService, svc.Running, 30*time.Second)
@@ -356,33 +356,33 @@ func (wsm *WindowsServiceManager) StartService(serviceID string) error {
 		wsm.statusCache.Set(serviceID, "running", int(status.ProcessId))
 		wsm.saveServices()
 		
-		// 发射状态变化事件
+		// Emit status change event
 		wsm.emitServiceStatusChanged(serviceID, "running", int(status.ProcessId))
 
 		return nil
 	})
 }
 
-// StopService 停止Windows服务
+// StopService stops a Windows service
 func (wsm *WindowsServiceManager) StopService(serviceID string) error {
 	wsm.mutex.Lock()
 	defer wsm.mutex.Unlock()
 
 	service, exists := wsm.services[serviceID]
 	if !exists {
-		return fmt.Errorf("服务不存在: %s", serviceID)
+		return fmt.Errorf("service does not exist: %s", serviceID)
 	}
 
 	return wsm.withSCM(func(scm *mgr.Mgr) error {
 		windowsService, err := scm.OpenService(serviceID)
 		if err != nil {
-			return fmt.Errorf("打开服务失败: %v", err)
+			return fmt.Errorf("failed to open service: %v", err)
 		}
 		defer windowsService.Close()
 
 		status, err := windowsService.Query()
 		if err != nil {
-			return fmt.Errorf("查询服务状态失败: %v", err)
+			return fmt.Errorf("failed to query service status: %v", err)
 		}
 
 		if status.State == svc.Stopped {
@@ -395,7 +395,7 @@ func (wsm *WindowsServiceManager) StopService(serviceID string) error {
 
 		_, err = windowsService.Control(svc.Stop)
 		if err != nil {
-			return fmt.Errorf("发送停止信号失败: %v", err)
+			return fmt.Errorf("failed to send stop signal: %v", err)
 		}
 
 		err = wsm.waitForServiceState(windowsService, svc.Stopped, 30*time.Second)
@@ -409,27 +409,27 @@ func (wsm *WindowsServiceManager) StopService(serviceID string) error {
 		wsm.statusCache.Set(serviceID, "stopped", 0)
 		wsm.saveServices()
 		
-		// 发射状态变化事件
+		// Emit status change event
 		wsm.emitServiceStatusChanged(serviceID, "stopped", 0)
 
 		return nil
 	})
 }
 
-// DeleteService 删除Windows服务
+// DeleteService deletes a Windows service
 func (wsm *WindowsServiceManager) DeleteService(serviceID string) error {
 	wsm.mutex.Lock()
 	defer wsm.mutex.Unlock()
 
 	_, exists := wsm.services[serviceID]
 	if !exists {
-		return fmt.Errorf("服务不存在: %s", serviceID)
+		return fmt.Errorf("service does not exist: %s", serviceID)
 	}
 
 	return wsm.withSCM(func(scm *mgr.Mgr) error {
 		windowsService, err := scm.OpenService(serviceID)
 		if err != nil {
-			return fmt.Errorf("打开服务失败: %v", err)
+			return fmt.Errorf("failed to open service: %v", err)
 		}
 		defer windowsService.Close()
 
@@ -442,21 +442,21 @@ func (wsm *WindowsServiceManager) DeleteService(serviceID string) error {
 
 		err = windowsService.Delete()
 		if err != nil {
-			return fmt.Errorf("删除服务失败: %v", err)
+			return fmt.Errorf("failed to delete service: %v", err)
 		}
 
 		delete(wsm.services, serviceID)
 		wsm.statusCache.Remove(serviceID)
 		wsm.saveServices()
 		
-		// 发射服务列表更新事件
+		// Emit service list update event
 		wsm.emitServicesUpdated()
 
 		return nil
 	})
 }
 
-// getServiceRealTimeStatus 获取服务实时状态（使用缓存优化）
+// getServiceRealTimeStatus gets real-time service status (using cache optimization)
 func (wsm *WindowsServiceManager) getServiceRealTimeStatus(scm *mgr.Mgr, serviceName string) (string, int) {
 	if cachedStatus, found := wsm.statusCache.Get(serviceName); found {
 		return cachedStatus.Status, cachedStatus.PID
@@ -496,12 +496,12 @@ func (wsm *WindowsServiceManager) getServiceRealTimeStatus(scm *mgr.Mgr, service
 		pid = 0
 	}
 
-	// 更新缓存
+	// Update cache
 	wsm.statusCache.Set(serviceName, statusStr, pid)
 	return statusStr, pid
 }
 
-// generateServiceName 生成唯一的服务名称
+// generateServiceName generates a unique service name
 func (wsm *WindowsServiceManager) generateServiceName(displayName string) string {
 	cleanName := strings.Map(func(r rune) rune {
 		if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') {
@@ -513,7 +513,7 @@ func (wsm *WindowsServiceManager) generateServiceName(displayName string) string
 	return fmt.Sprintf("WSM_%s_%d", cleanName, time.Now().Unix())
 }
 
-// saveServices 保存服务数据到文件
+// saveServices saves service data to file
 func (wsm *WindowsServiceManager) saveServices() {
 	data, err := json.MarshalIndent(wsm.services, "", "  ")
 	if err != nil {
@@ -522,7 +522,7 @@ func (wsm *WindowsServiceManager) saveServices() {
 	os.WriteFile(wsm.dataFile, data, 0644)
 }
 
-// loadServices 从文件加载服务数据
+// loadServices loads service data from file
 func (wsm *WindowsServiceManager) loadServices() {
 	if _, err := os.Stat(wsm.dataFile); os.IsNotExist(err) {
 		return
@@ -536,43 +536,43 @@ func (wsm *WindowsServiceManager) loadServices() {
 	json.Unmarshal(data, &wsm.services)
 }
 
-// SetServiceAutoStart 设置服务开机自启动
+// SetServiceAutoStart sets whether a service starts automatically at boot
 func (wsm *WindowsServiceManager) SetServiceAutoStart(serviceID string, enabled bool) error {
 	wsm.mutex.Lock()
 	defer wsm.mutex.Unlock()
 
 	service, exists := wsm.services[serviceID]
 	if !exists {
-		return fmt.Errorf("服务不存在: %s", serviceID)
+		return fmt.Errorf("service does not exist: %s", serviceID)
 	}
 
 	return wsm.withSCM(func(scm *mgr.Mgr) error {
 		windowsService, err := scm.OpenService(serviceID)
 		if err != nil {
-			return fmt.Errorf("打开服务失败: %v", err)
+			return fmt.Errorf("failed to open service: %v", err)
 		}
 		defer windowsService.Close()
 
-		// 获取当前服务配置
+		// Get current service configuration
 		config, err := windowsService.Config()
 		if err != nil {
-			return fmt.Errorf("获取服务配置失败: %v", err)
+			return fmt.Errorf("failed to get service configuration: %v", err)
 		}
 
-		// 修改启动类型
+		// Modify start type
 		if enabled {
 			config.StartType = mgr.StartAutomatic
 		} else {
 			config.StartType = mgr.StartManual
 		}
 
-		// 更新服务配置
+		// Update service configuration
 		err = windowsService.UpdateConfig(config)
 		if err != nil {
-			return fmt.Errorf("更新服务配置失败: %v", err)
+			return fmt.Errorf("failed to update service configuration: %v", err)
 		}
 
-		// 更新内存中的服务信息
+		// Update in-memory service info
 		service.AutoStart = enabled
 		service.UpdatedAt = time.Now()
 		wsm.saveServices()
@@ -581,7 +581,7 @@ func (wsm *WindowsServiceManager) SetServiceAutoStart(serviceID string, enabled 
 	})
 }
 
-// GetServiceAutoStart 获取服务开机自启动状态
+// GetServiceAutoStart gets whether a service is set to auto-start
 func (wsm *WindowsServiceManager) GetServiceAutoStart(serviceID string) bool {
 	wsm.mutex.RLock()
 	defer wsm.mutex.RUnlock()

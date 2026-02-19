@@ -20,23 +20,27 @@ var assets embed.FS
 var trayIcon []byte
 
 func main() {
+	// Check if running in service wrapper mode
 	if isWrapper, serviceName := IsServiceWrapperMode(); isWrapper {
 		config, err := LoadServiceConfigFromRegistry(serviceName)
 		if err != nil {
-			log.Fatalf("加载服务配置失败: %v", err)
+			log.Fatalf("Failed to load service configuration: %v", err)
 		}
 
 		err = RunAsWindowsService(serviceName, *config)
 		if err != nil {
-			log.Fatalf("运行Windows服务失败: %v", err)
+			log.Fatalf("Failed to run as Windows service: %v", err)
 		}
 		return
 	}
 
+	// Normal GUI mode
 	app := NewApp()
 
+	// Create system tray manager
 	systrayManager := NewSystrayManager(app, trayIcon)
 
+	// Run Wails application
 	err := wails.Run(&options.App{
 		Title:     "Windows Service Manager",
 		Width:     900,

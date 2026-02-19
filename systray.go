@@ -6,14 +6,14 @@ import (
 	"os"
 )
 
-// SystrayManager 管理系统托盘
+// SystrayManager manages the system tray
 type SystrayManager struct {
 	app      *App
 	trayIcon []byte
 	quitCh   chan struct{}
 }
 
-// NewSystrayManager 创建新的系统托盘管理器
+// NewSystrayManager creates a new system tray manager
 func NewSystrayManager(app *App, trayIconData []byte) *SystrayManager {
 	return &SystrayManager{
 		app:      app,
@@ -22,12 +22,12 @@ func NewSystrayManager(app *App, trayIconData []byte) *SystrayManager {
 	}
 }
 
-// Start 启动系统托盘
+// Start starts the system tray
 func (s *SystrayManager) Start() {
 	go func() {
 		defer func() {
 			if r := recover(); r != nil {
-				println("系统托盘启动失败:", r)
+				println("system tray startup failed:", r)
 			}
 		}()
 
@@ -35,7 +35,7 @@ func (s *SystrayManager) Start() {
 	}()
 }
 
-// onReady 托盘初始化完成时调用
+// onReady is called when tray initialization is complete
 func (s *SystrayManager) onReady() {
 	if len(s.trayIcon) > 0 {
 		systray.SetIcon(s.trayIcon)
@@ -44,11 +44,11 @@ func (s *SystrayManager) onReady() {
 	}
 
 	systray.SetTitle("Windows Service Manager")
-	systray.SetTooltip("Windows 服务管理器 - 右键显示菜单")
+	systray.SetTooltip("Windows Service Manager - Right-click to show menu")
 
-	mShow := systray.AddMenuItem("显示窗口", "显示主窗口")
+	mShow := systray.AddMenuItem("Show Window", "Show main window")
 	systray.AddSeparator()
-	mExit := systray.AddMenuItem("退出程序", "退出应用程序")
+	mExit := systray.AddMenuItem("Exit Program", "Exit application")
 
 	go func() {
 		for {
@@ -67,7 +67,7 @@ func (s *SystrayManager) onReady() {
 	}()
 }
 
-// ExitApp 退出应用程序
+// ExitApp exits the application
 func (s *SystrayManager) ExitApp() {
 	select {
 	case s.quitCh <- struct{}{}:
@@ -81,12 +81,12 @@ func (s *SystrayManager) ExitApp() {
 	os.Exit(0)
 }
 
-// onExit 托盘退出时调用
+// onExit is called when the tray exits
 func (s *SystrayManager) onExit() {
-	// 清理工作在Cleanup()中处理
+	// Cleanup work is handled in Cleanup()
 }
 
-// Cleanup 清理系统托盘资源
+// Cleanup cleans up system tray resources
 func (s *SystrayManager) Cleanup() {
 	select {
 	case s.quitCh <- struct{}{}:

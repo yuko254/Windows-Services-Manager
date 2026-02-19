@@ -48,7 +48,6 @@
     -webkit-font-smoothing: antialiased;
 }
 
-/* 删除按钮样式 */
 .win11-delete-button:hover {
     background-color: #fef2f2 !important;
     border-color: #fecaca !important;
