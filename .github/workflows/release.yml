@@ -49,12 +49,12 @@ jobs:
         body: |
           ## Windows Service Manager ${{ github.event.inputs.tag }}
           
-          现代化的 Windows 后台服务管理工具
+          A modern Windows background service management tool
           
-          ### 使用说明
-          1. 下载并运行 `services.exe`
-          2. 点击"添加服务"创建新的后台服务
-          3. 请以管理员权限运行
+          ### Usage Instructions
+          1. Download and run `services.exe`
+          2. Click "Add Service" to create a new background service
+          3. Run with administrator privileges
           
         artifacts: "build/bin/services.exe"
         artifactContentType: "application/octet-stream"
