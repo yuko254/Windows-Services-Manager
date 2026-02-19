@@ -40,23 +40,58 @@ jobs:
     
     - name: Build application
       run: wails build -clean -platform windows/amd64 -ldflags "-H windowsgui"
+
+    - name: Generate release notes
+      id: generate_notes
+      shell: bash
+      run: |
+        # Fetch all tags
+        git fetch --tags
+
+        # Get the previous tag (the latest tag before the current HEAD)
+        PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+        echo "Previous tag: $PREV_TAG"
+
+        NOTES_FILE="release_notes.md"
+        echo "# Windows Service Manager ${{ github.event.inputs.tag }}" > $NOTES_FILE
+        echo "" >> $NOTES_FILE
+        echo "## Changes" >> $NOTES_FILE
+        echo "" >> $NOTES_FILE
+
+        if [ -z "$PREV_TAG" ]; then
+          # First release – list all commits
+          git log --pretty=format:"- %s (%h)" >> $NOTES_FILE
+        else
+          # List commits since previous tag
+          git log --pretty=format:"- %s (%h)" $PREV_TAG..HEAD >> $NOTES_FILE
+        fi
+
+        echo "" >> $NOTES_FILE
+        if [ -n "$PREV_TAG" ]; then
+          echo "**Full Changelog**: https://github.com/${{ github.repository }}/compare/$PREV_TAG...${{ github.event.inputs.tag }}" >> $NOTES_FILE
+        fi
+
+        # Output the file name for the next step
+        echo "notes_file=$NOTES_FILE" >> $GITHUB_OUTPUT
+
     
     - name: Create Release
       uses: ncipollo/release-action@v1
       with:
         tag: ${{ github.event.inputs.tag }}
         name: Release ${{ github.event.inputs.tag }}
-        body: |
-          ## Windows Service Manager ${{ github.event.inputs.tag }}
+        bodyPath: ${{ steps.generate_notes.outputs.notes_file }} 
+        # body: |
+        #   ## Windows Service Manager ${{ github.event.inputs.tag }}
           
-          A modern Windows background service management tool
+        #   A modern Windows background service management tool
           
-          ### Usage Instructions
-          1. Download and run `services.exe`
-          2. Click "Add Service" to create a new background service
-          3. Run with administrator privileges
+        #   ### Usage Instructions
+        #   1. Download and run `services.exe`
+        #   2. Click "Add Service" to create a new background service
+        #   3. Run with administrator privileges
           
-        artifacts: "build/bin/services.exe"
+        artifacts: "build/bin/"
         artifactContentType: "application/octet-stream"
         draft: false
         prerelease: false
