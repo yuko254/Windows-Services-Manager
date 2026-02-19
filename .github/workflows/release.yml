@@ -91,7 +91,7 @@ jobs:
         #   2. Click "Add Service" to create a new background service
         #   3. Run with administrator privileges
           
-        artifacts: "build/bin/"
+        artifacts: "build/bin/*"
         artifactContentType: "application/octet-stream"
         draft: false
         prerelease: false
