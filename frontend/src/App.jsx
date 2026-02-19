@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback, useMemo, memo } from 'react';
+import { useState, useEffect, useCallback, useMemo, memo, useContext } from 'react';
+import { ThemeContext } from './main';
 import {
   Button,
   Input,
@@ -148,6 +149,7 @@ const ServiceRow = memo(({ service, onStart, onStop, onDelete, onAutoStartToggle
 ServiceRow.displayName = 'ServiceRow';
 
 function App() {
+  const { isDark, toggleTheme } = useContext(ThemeContext);
   const [services, setServices] = useState([]);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isSettingsDialogOpen, setIsSettingsDialogOpen] = useState(false);
@@ -165,6 +167,11 @@ function App() {
     args: '',
     workingDir: ''
   });
+
+  const handleTheme = useCallback((checked) => {
+    toggleTheme(checked);
+    document.body.classList.toggle('dark-theme');
+  }, [isDark]);
   
   const { dispatchToast } = useToastController();
 
@@ -656,6 +663,24 @@ function App() {
                       <Switch
                         checked={autoStart}
                         onChange={(_, data) => handleAppAutoStartToggle(data.checked)}
+                      />
+                    </div>
+                  </Field>
+
+                  <Field>
+                    <div style={{ 
+                      display: 'flex', 
+                      justifyContent: 'space-between', 
+                      alignItems: 'center',
+                      padding: '12px 16px',
+                      backgroundColor: 'rgba(255, 255, 255, 0.5)',
+                      borderRadius: '12px',
+                      backdropFilter: 'blur(10px)'
+                    }}>
+                      <Text>Dark theme</Text>
+                      <Switch
+                        checked={isDark}
+                        onChange={(_, data) => handleTheme(data.checked)}
                       />
                     </div>
                   </Field>

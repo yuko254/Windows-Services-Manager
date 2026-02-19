@@ -1,21 +1,122 @@
+/* ===== LIGHT THEME (default) ===== */
+:root {
+    /* Base backgrounds */
+    --bg-color: rgba(239, 244, 249, 1);
+    --sub-bg-color: rgba(239, 244, 249, 1);          /* used in .content-area */
+    --bg-color-transparent: rgba(255, 255, 255, 0.5);
+    --bg-color-transparent1: rgba(255, 255, 255, 0.6);
+    --bg-color-transparent2: rgba(255, 255, 255, 0.7);
+    --bg-color-transparent3: rgba(255, 255, 255, 0.8);
+    --bg-color-transparent4: rgba(255, 255, 255, 0.9);
+    --bg-color-transparent45: rgba(255, 255, 255, 0.95);
+    --bg-color-tableHeader: rgba(249, 249, 249, 0.9);
+    --bg-color-tableRow-hover: rgba(0, 120, 212, 0.05);
+    --bg-color-menu-item-hover: rgba(0, 120, 212, 0.1);
+
+    /* Text colors */
+    --text-color: rgba(0, 0, 0, 1);
+    --text-color-bar: rgba(102, 102, 102, 1);
+    --text-color-empty-state-text: rgba(102, 102, 102, 1);
+
+    /* Borders */
+    --border-color-content: rgba(255, 255, 255, 0.3);
+    --border-color-header: rgba(0, 0, 0, 0.05);
+    --border-color-input: rgba(0, 0, 0, 0.1);
+    --border-color-input-focus: rgba(0, 120, 212, 1);
+    --border-color-table: rgba(255, 255, 255, 0.3);
+    --border-color-tableRow: rgba(0, 0, 0, 0.05);
+    --border-color-dialog: rgba(255, 255, 255, 0.4);
+    --border-color-menu: rgba(255, 255, 255, 0.3);
+    --border-color-empty-state: rgba(0, 120, 212, 0.3);
+
+    /* Shadows */
+    --shadow-color-input-focus: rgba(0, 120, 212, 0.2);
+    --shadow-color-dialog: rgba(0, 0, 0, 0.1);
+    --shadow-color-menu: rgba(0, 0, 0, 0.1);
+
+    /* Additional */
+    --empty-state-icon-color: rgba(0, 120, 212, 0.4);
+    --scrollbar-thumb-color: rgba(0, 0, 0, 0.2);
+    --scrollbar-thumb-hover-color: rgba(0, 0, 0, 0.3);
+
+    /* Service status colors */
+    --status-running-bg: rgba(16, 124, 16, 0.1);
+    --status-running-text: #107c10;
+    --status-stopped-bg: rgba(96, 94, 92, 0.1);
+    --status-stopped-text: #605e5c;
+    --status-error-bg: rgba(196, 43, 28, 0.1);
+    --status-error-text: #c42b1c;
+}
+
+/* ===== DARK THEME (add class "dark-theme" to html or body) ===== */
+.dark-theme {
+    /* Base backgrounds */
+    --bg-color: rgba(31, 31, 31, 1);
+    --sub-bg-color: rgba(37, 37, 37, 1);
+    --bg-color-transparent: rgba(45, 45, 45, 0.5);
+    --bg-color-transparent1: rgba(45, 45, 45, 0.6);
+    --bg-color-transparent2: rgba(45, 45, 45, 0.7);
+    --bg-color-transparent3: rgba(45, 45, 45, 0.8);
+    --bg-color-transparent4: rgba(45, 45, 45, 0.9);
+    --bg-color-transparent45: rgba(45, 45, 45, 0.95);
+    --bg-color-tableHeader: rgba(55, 55, 55, 0.9);
+    --bg-color-tableRow-hover: rgba(0, 120, 212, 0.2);
+    --bg-color-menu-item-hover: rgba(0, 120, 212, 0.25);
+
+    /* Text colors */
+    --text-color: rgba(255, 255, 255, 1);
+    --text-color-bar: rgba(200, 200, 200, 1);
+    --text-color-empty-state-text: rgba(200, 200, 200, 1);
+
+    /* Borders */
+    --border-color-content: rgba(255, 255, 255, 0.12);
+    --border-color-header: rgba(255, 255, 255, 0.08);
+    --border-color-input: rgba(255, 255, 255, 0.15);
+    --border-color-input-focus: rgba(0, 120, 212, 1);
+    --border-color-table: rgba(255, 255, 255, 0.12);
+    --border-color-tableRow: rgba(255, 255, 255, 0.08);
+    --border-color-dialog: rgba(255, 255, 255, 0.2);
+    --border-color-menu: rgba(255, 255, 255, 0.15);
+    --border-color-empty-state: rgba(0, 120, 212, 0.4);
+
+    /* Shadows */
+    --shadow-color-input-focus: rgba(0, 120, 212, 0.3);
+    --shadow-color-dialog: rgba(0, 0, 0, 0.5);
+    --shadow-color-menu: rgba(0, 0, 0, 0.5);
+
+    /* Additional */
+    --empty-state-icon-color: rgba(0, 120, 212, 0.6);
+    --scrollbar-thumb-color: rgba(255, 255, 255, 0.2);
+    --scrollbar-thumb-hover-color: rgba(255, 255, 255, 0.3);
+
+    /* Service status colors */
+    --status-running-bg: rgba(16, 124, 16, 0.2);
+    --status-running-text: #6cc06c;
+    --status-stopped-bg: rgba(96, 94, 92, 0.2);
+    --status-stopped-text: #a0a0a0;
+    --status-error-bg: rgba(196, 43, 28, 0.2);
+    --status-error-text: #f56b5e;
+}
+
+/* ===== GLOBAL STYLES (unchanged) ===== */
 html {
-    background-color: #EFF4F9;
-    color: black;
+    background-color: var(--bg-color);
+    color: var(--text-color);
 }
 
 body {
     margin: 0;
     padding: 0;
-    color: black;
+    color: var(--text-color);
     font-family: "Segoe UI Variable", "Segoe UI", -apple-system, BlinkMacSystemFont, "Roboto",
     "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
     sans-serif;
-    background-color: #EFF4F9;
+    background-color: var(--bg-color);
 }
 
 #root {
     height: 100vh;
-    background-color: #EFF4F9;
+    background-color: var(--bg-color);
     overflow: hidden;
 }
 
@@ -27,8 +128,8 @@ body {
     height: 100vh;
     display: flex;
     flex-direction: column;
-    background-color: #EFF4F9;
-    color: black;
+    background-color: var(--bg-color);
+    color: var(--text-color);
 }
 
 .main-content {
@@ -42,33 +143,33 @@ body {
 .content-area {
     flex: 1;
     overflow-y: auto;
-    background-color: rgba(255, 255, 255, 0.7);
+    background-color: var(--sub-bg-color);
     border-radius: 10px;
     padding: 16px;
     backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.3);
+    border: 1px solid var(--border-color-content);
 }
 
 .header {
     height: 56px;
-    background-color: rgba(255, 255, 255, 0.8);
+    background-color: var(--bg-color-transparent3);
     backdrop-filter: blur(30px);
     display: flex;
     align-items: center;
     padding: 0 20px;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    border-bottom: 1px solid var(--border-color-header);
 }
 
 .status-bar {
     height: 32px;
-    background-color: rgba(255, 255, 255, 0.6);
+    background-color: var(--bg-color-transparent1);
     backdrop-filter: blur(20px);
     display: flex;
     align-items: center;
     padding: 0 20px;
     font-size: 12px;
-    color: #666;
-    border-top: 1px solid rgba(0, 0, 0, 0.05);
+    color: var(--text-color-bar);
+    border-top: 1px solid var(--border-color-header);
 }
 
 /* Win11 style button */
@@ -90,40 +191,40 @@ body {
 /* Win11 style input */
 .win11-input {
     border-radius: 8px !important;
-    border: 1px solid rgba(0, 0, 0, 0.1) !important;
-    background-color: rgba(255, 255, 255, 0.9) !important;
+    border: 1px solid var(--border-color-input) !important;
+    background-color: var(--bg-color-transparent4) !important;
     transition: all 0.2s ease !important;
 }
 
 .win11-input:focus {
-    border-color: #0078d4 !important;
-    box-shadow: 0 0 0 2px rgba(0, 120, 212, 0.2) !important;
+    border-color: var(--border-color-input-focus) !important;
+    box-shadow: 0 0 0 2px var(--shadow-color-input-focus) !important;
 }
 
 /* Win11 style table - compact version */
 .win11-table {
     border-radius: 10px !important;
-    background-color: rgba(255, 255, 255, 0.9) !important;
+    background-color: var(--bg-color-transparent4) !important;
     backdrop-filter: blur(20px) !important;
-    border: 1px solid rgba(255, 255, 255, 0.3) !important;
+    border: 1px solid var(--border-color-table) !important;
     overflow: hidden !important;
     font-size: 14px !important;
 }
 
 .win11-table-header {
-    background-color: rgba(249, 249, 249, 0.9) !important;
+    background-color: var(--bg-color-tableHeader) !important;
     backdrop-filter: blur(30px) !important;
     height: 40px !important;
 }
 
 .win11-table-row {
-    border-bottom: 1px solid rgba(0, 0, 0, 0.05) !important;
+    border-bottom: 1px solid var(--border-color-tableRow) !important;
     transition: background-color 0.1s ease !important;
     height: 48px !important;
 }
 
 .win11-table-row:hover {
-    background-color: rgba(0, 120, 212, 0.05) !important;
+    background-color: var(--bg-color-tableRow-hover) !important;
 }
 
 .win11-table-row:last-child {
@@ -139,9 +240,9 @@ body {
 .win11-dialog {
     border-radius: 16px !important;
     backdrop-filter: blur(40px) !important;
-    background-color: rgba(255, 255, 255, 0.95) !important;
-    border: 1px solid rgba(255, 255, 255, 0.4) !important;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1) !important;
+    background-color: var(--bg-color-transparent45) !important;
+    border: 1px solid var(--border-color-dialog) !important;
+    box-shadow: 0 8px 32px var(--shadow-color-dialog) !important;
 }
 
 /* Win11 style badge */
@@ -155,9 +256,9 @@ body {
 .win11-menu {
     border-radius: 12px !important;
     backdrop-filter: blur(40px) !important;
-    background-color: rgba(255, 255, 255, 0.95) !important;
-    border: 1px solid rgba(255, 255, 255, 0.3) !important;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1) !important;
+    background-color: var(--bg-color-transparent45) !important;
+    border: 1px solid var(--border-color-menu) !important;
+    box-shadow: 0 8px 32px var(--shadow-color-menu) !important;
 }
 
 .win11-menu-item {
@@ -167,7 +268,7 @@ body {
 }
 
 .win11-menu-item:hover {
-    background-color: rgba(0, 120, 212, 0.1) !important;
+    background-color: var(--bg-color-menu-item-hover) !important;
 }
 
 /* Empty state style - compact version */
@@ -177,21 +278,21 @@ body {
     align-items: center;
     justify-content: center;
     padding: 40px 20px;
-    background-color: rgba(255, 255, 255, 0.5);
+    background-color: var(--bg-color-transparent);
     border-radius: 12px;
     backdrop-filter: blur(10px);
-    border: 2px dashed rgba(0, 120, 212, 0.3);
+    border: 2px dashed var(--border-color-empty-state);
     margin: 16px 0;
 }
 
 .empty-state-icon {
     font-size: 36px;
-    color: rgba(0, 120, 212, 0.4);
+    color: var(--empty-state-icon-color);
     margin-bottom: 12px;
 }
 
 .empty-state-text {
-    color: #666;
+    color: var(--text-color-empty-state);
     font-size: 14px;
     text-align: center;
     line-height: 1.4;
@@ -209,18 +310,18 @@ body {
 }
 
 .service-status.running {
-    background-color: rgba(16, 124, 16, 0.1);
-    color: #107c10;
+    background-color: var(--status-running-bg);
+    color: var(--status-running-text);
 }
 
 .service-status.stopped {
-    background-color: rgba(96, 94, 92, 0.1);
-    color: #605e5c;
+    background-color: var(--status-stopped-bg);
+    color: var(--status-stopped-text);
 }
 
 .service-status.error {
-    background-color: rgba(196, 43, 28, 0.1);
-    color: #c42b1c;
+    background-color: var(--status-error-bg);
+    color: var(--status-error-text);
 }
 
 /* Animation effects */
@@ -249,10 +350,10 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-    background: rgba(0, 0, 0, 0.2);
+    background: var(--scrollbar-thumb-color);
     border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    background: rgba(0, 0, 0, 0.3);
+    background: var(--scrollbar-thumb-hover-color);
 }

@@ -196,7 +196,7 @@ var (
 
 // getCurrentThread gets a pseudo handle for the current thread
 func getCurrentThread() (windows.Handle, error) {
-	r0, _, e1 := syscall.Syscall(procGetCurrentThread.Addr(), 0, 0, 0, 0)
+	r0, _, e1 := syscall.SyscallN(procGetCurrentThread.Addr(), 0, 0, 0, 0)
 	handle := windows.Handle(r0)
 	if handle == 0 {
 		if e1 != 0 {
@@ -213,7 +213,7 @@ func openThreadToken(h windows.Handle, access uint32, self bool, token *windows.
 	if self {
 		_p0 = 1
 	}
-	r1, _, e1 := syscall.Syscall6(
+	r1, _, e1 := syscall.SyscallN(
 		procOpenThreadToken.Addr(),
 		4,
 		uintptr(h),
@@ -233,7 +233,7 @@ func openThreadToken(h windows.Handle, access uint32, self bool, token *windows.
 
 // impersonateSelf impersonates the calling thread
 func impersonateSelf() error {
-	r0, _, e1 := syscall.Syscall(procImpersonateSelf.Addr(), 1, uintptr(2), 0, 0)
+	r0, _, e1 := syscall.SyscallN(procImpersonateSelf.Addr(), 1, uintptr(2), 0, 0)
 	if r0 == 0 {
 		if e1 != 0 {
 			return error(e1)
@@ -245,7 +245,7 @@ func impersonateSelf() error {
 
 // revertToSelf restores the original security context
 func revertToSelf() error {
-	r0, _, e1 := syscall.Syscall(procRevertToSelf.Addr(), 0, 0, 0, 0)
+	r0, _, e1 := syscall.SyscallN(procRevertToSelf.Addr(), 0, 0, 0, 0)
 	if r0 == 0 {
 		if e1 != 0 {
 			return error(e1)
