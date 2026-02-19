@@ -14,48 +14,74 @@ jobs:
     runs-on: windows-latest
     permissions:
       contents: write
-    
+
     steps:
     - uses: actions/checkout@v4
-    
+      with:
+        fetch-depth: 0  # fetch all history for git describe
+
     - name: Setup Go
       uses: actions/setup-go@v5
       with:
         go-version: '1.24'
         cache: true
-    
+
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
         node-version: '20'
         cache: 'npm'
         cache-dependency-path: 'frontend/package-lock.json'
-    
+
     - name: Install Wails
       run: go install github.com/wailsapp/wails/v2/cmd/wails@v2.10.2
-    
+
     - name: Install frontend dependencies
       run: npm install
       working-directory: ./frontend
-    
+
     - name: Build application
       run: wails build -clean -platform windows/amd64 -ldflags "-H windowsgui"
-    
+
+    - name: Generate release notes
+      id: generate_notes
+      shell: bash
+      run: |
+        # Fetch all tags
+        git fetch --tags
+
+        # Get the previous tag (the latest tag before the current HEAD)
+        PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+        echo "Previous tag: $PREV_TAG"
+
+        NOTES_FILE="release_notes.md"
+        echo "# Windows Service Manager ${{ github.event.inputs.tag }}" > $NOTES_FILE
+        echo "" >> $NOTES_FILE
+        echo "## Changes" >> $NOTES_FILE
+        echo "" >> $NOTES_FILE
+
+        if [ -z "$PREV_TAG" ]; then
+          # First release – list all commits
+          git log --pretty=format:"- %s (%h)" >> $NOTES_FILE
+        else
+          # List commits since previous tag
+          git log --pretty=format:"- %s (%h)" $PREV_TAG..HEAD >> $NOTES_FILE
+        fi
+
+        echo "" >> $NOTES_FILE
+        if [ -n "$PREV_TAG" ]; then
+          echo "**Full Changelog**: https://github.com/${{ github.repository }}/compare/$PREV_TAG...${{ github.event.inputs.tag }}" >> $NOTES_FILE
+        fi
+
+        # Output the file name for the next step
+        echo "notes_file=$NOTES_FILE" >> $GITHUB_OUTPUT
+
     - name: Create Release
       uses: ncipollo/release-action@v1
       with:
         tag: ${{ github.event.inputs.tag }}
         name: Release ${{ github.event.inputs.tag }}
-        body: |
-          ## Windows Service Manager ${{ github.event.inputs.tag }}
-          
-          A modern Windows background service management tool
-          
-          ### Usage Instructions
-          1. Download and run `services.exe`
-          2. Click "Add Service" to create a new background service
-          3. Run with administrator privileges
-          
+        bodyPath: ${{ steps.generate_notes.outputs.notes_file }}  # Use the generated file
         artifacts: "build/bin/services.exe"
         artifactContentType: "application/octet-stream"
         draft: false
