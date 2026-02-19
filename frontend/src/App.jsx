@@ -167,11 +167,6 @@ function App() {
     args: '',
     workingDir: ''
   });
-
-  const handleTheme = useCallback((checked) => {
-    toggleTheme(checked);
-    document.body.classList.toggle('dark-theme');
-  }, [isDark]);
   
   const { dispatchToast } = useToastController();
 
@@ -680,7 +675,7 @@ function App() {
                       <Text>Dark theme</Text>
                       <Switch
                         checked={isDark}
-                        onChange={(_, data) => handleTheme(data.checked)}
+                        onChange={(_, data) => toggleTheme(data.checked)}
                       />
                     </div>
                   </Field>

@@ -2,8 +2,10 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"syscall"
 	"time"
@@ -37,9 +39,12 @@ type ServiceConfig struct {
 }
 
 type App struct {
-	ctx               context.Context
-	serviceManager    *WindowsServiceManager
+	ctx                context.Context
+	serviceManager     *WindowsServiceManager
 	environmentManager *EnvironmentManager
+}
+type ThemeData struct {
+	Theme string `json:"theme"` // "light" or "dark"
 }
 
 func NewApp() *App {
@@ -54,6 +59,64 @@ func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
 	a.serviceManager.SetContext(ctx)
 	a.serviceManager.loadServices()
+}
+
+// getThemeConfigPath returns the path to the theme config file
+func (a *App) getThemeConfigPath() (string, error) {
+	configDir, err := os.UserConfigDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(configDir, "Windows-Services-Manager", "theme.json"), nil
+}
+
+// GetTheme returns the saved theme ("light" or "dark"), defaulting to "light"
+func (a *App) GetTheme() string {
+	path, err := a.getThemeConfigPath()
+	if err != nil {
+		return "light"
+	}
+
+	data, err := os.ReadFile(path)
+	if err != nil {
+		// If file doesn't exist, return default
+		return "light"
+	}
+
+	var themeData ThemeData
+	if err := json.Unmarshal(data, &themeData); err != nil {
+		return "light"
+	}
+
+	if themeData.Theme != "light" && themeData.Theme != "dark" {
+		return "light"
+	}
+	return themeData.Theme
+}
+
+// SetTheme saves the theme preference
+func (a *App) SetTheme(theme string) error {
+	if theme != "light" && theme != "dark" {
+		theme = "light" // fallback
+	}
+
+	path, err := a.getThemeConfigPath()
+	if err != nil {
+		return err
+	}
+
+	// Ensure directory exists
+	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+		return err
+	}
+
+	themeData := ThemeData{Theme: theme}
+	data, err := json.MarshalIndent(themeData, "", "  ")
+	if err != nil {
+		return err
+	}
+
+	return os.WriteFile(path, data, 0644)
 }
 
 // GetServices returns the list of all services
@@ -87,7 +150,7 @@ func (a *App) DeleteService(serviceID string) error {
 
 // SelectFile opens a file selection dialog
 func (a *App) SelectFile() (string, error) {
-	selection, err := runtime.OpenFileDialog(a.ctx, runtime.OpenDialogOptions{
+	return runtime.OpenFileDialog(a.ctx, runtime.OpenDialogOptions{
 		Title: "Select Executable File",
 		Filters: []runtime.FileFilter{
 			{
@@ -100,12 +163,6 @@ func (a *App) SelectFile() (string, error) {
 			},
 		},
 	})
-
-	if err != nil {
-		return "", err
-	}
-
-	return selection, nil
 }
 
 // SelectDirectory opens a directory selection dialog

@@ -26,14 +26,30 @@ type WindowsServiceManager struct {
 	ctx         context.Context
 }
 
+// getDataConfigPath returns the path to the data config file
+func getDataConfigPath() (string, error) {
+    configDir, err := os.UserConfigDir()
+    if err != nil {
+        return "", err
+    }
+    return filepath.Join(configDir, "Windows-Services-Manager", "data.json"), nil
+}
+
+
 // NewWindowsServiceManager creates a new Windows service manager
 func NewWindowsServiceManager() *WindowsServiceManager {
 	cache := NewServiceStatusCache()
 	cache.StartCleanupRoutine()
+	path, err := getDataConfigPath()
+	if err != nil {
+		fmt.Printf("Warning: failed to get data config path: %v\n", err)
+		path = "services_data.json"
+		return nil
+	}
 
 	return &WindowsServiceManager{
 		services:    make(map[string]*Service),
-		dataFile:    filepath.Join(os.TempDir(), "windows_services_data.json"),
+		dataFile:    path,
 		statusCache: cache,
 	}
 }
