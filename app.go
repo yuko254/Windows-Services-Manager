@@ -1,12 +1,15 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 	"unsafe"
@@ -36,21 +39,31 @@ type ServiceConfig struct {
 	ExePath    string `json:"exePath"`
 	Args       string `json:"args"`
 	WorkingDir string `json:"workingDir"`
+	LogPath    string 
+}
+
+type ThemeData struct {
+	Theme string `json:"theme"` // "light" or "dark"
+}
+
+type tailerInfo struct {
+    cancel context.CancelFunc
+    done   chan struct{}
 }
 
 type App struct {
 	ctx                context.Context
 	serviceManager     *WindowsServiceManager
 	environmentManager *EnvironmentManager
-}
-type ThemeData struct {
-	Theme string `json:"theme"` // "light" or "dark"
+	logTailers         map[string]*tailerInfo // serviceID -> tailer info
+	logTailersLock     sync.Mutex
 }
 
 func NewApp() *App {
 	return &App{
 		serviceManager:     NewWindowsServiceManager(),
 		environmentManager: NewEnvironmentManager(),
+		logTailers:         make(map[string]*tailerInfo),
 	}
 }
 
@@ -67,7 +80,7 @@ func (a *App) getThemeConfigPath() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(configDir, "Windows-Services-Manager", "theme.json"), nil
+	return filepath.Join(configDir, "Windows Service Manager.exe", "theme.json"), nil
 }
 
 // GetTheme returns the saved theme ("light" or "dark"), defaulting to "light"
@@ -145,7 +158,127 @@ func (a *App) StopService(serviceID string) error {
 
 // DeleteService deletes a service
 func (a *App) DeleteService(serviceID string) error {
+	// Stop any active log monitoring for this service
+	a.StopMonitoringService(serviceID)
 	return a.serviceManager.DeleteService(serviceID)
+}
+
+// StartMonitoringLog begins tailing the service's log file and emits lines to the frontend.
+func (a *App) StartMonitoringService(serviceID string) error {
+	a.logTailersLock.Lock()
+	defer a.logTailersLock.Unlock()
+
+	// If already monitoring, stop the previous tailer and start fresh.
+	if info, exists := a.logTailers[serviceID]; exists {
+		info.cancel()
+		<-info.done // Wait for the old goroutine to exit
+		delete(a.logTailers, serviceID)
+	}
+
+	logPath, _, err := a.serviceManager.GetServiceLogPath(serviceID)
+	if err != nil {
+		return fmt.Errorf("failed to get log path %s: %w", logPath, err)
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan struct{})
+	a.logTailers[serviceID] = &tailerInfo{
+        cancel: cancel,
+        done:   done,
+    }
+
+	go func() {
+        defer close(done)
+        a.tailLogFile(ctx, serviceID, logPath)
+    }()
+	return nil
+}
+
+// GetLogContent returns all current lines from the service's log file.
+func (a *App) GetLogContent(serviceID string) ([]string, error) {
+    logPath, _, err := a.serviceManager.GetServiceLogPath(serviceID)
+    if err != nil {
+        return nil, err
+    }
+    return a.readAllLines(logPath)
+}
+
+// readAllLines is a helper that reads a file and returns its lines.
+func (a *App) readAllLines(path string) ([]string, error) {
+    file, err := os.Open(path)
+    if err != nil {
+        return nil, err
+    }
+    defer file.Close()
+
+    var lines []string
+    scanner := bufio.NewScanner(file)
+    for scanner.Scan() {
+        lines = append(lines, scanner.Text())
+    }
+    return lines, scanner.Err()
+}
+
+func (a *App) tailLogFile(ctx context.Context, serviceID, logPath string) {
+    // Wait for file to exist (up to 10 seconds)
+    for range 20 {
+        if _, err := os.Stat(logPath); err == nil {
+            break
+        }
+        time.Sleep(500 * time.Millisecond)
+    }
+
+    file, err := os.Open(logPath)
+    if err != nil {
+        runtime.LogErrorf(a.ctx, "Cannot open log file for %s: %v", serviceID, err)
+        return
+    }
+    defer file.Close()
+
+    // Seek to the end – we only want new lines from now on.
+    if _, err := file.Seek(0, io.SeekEnd); err != nil {
+        runtime.LogErrorf(a.ctx, "Seek error for %s: %v", serviceID, err)
+        return
+    }
+
+    reader := bufio.NewReader(file)
+    lineBuf := make([]byte, 0)
+
+    for {
+        select {
+        case <-ctx.Done():
+            return
+        default:
+            line, isPrefix, err := reader.ReadLine()
+            if err != nil {
+                if err != io.EOF {
+                    runtime.LogErrorf(a.ctx, "Read error for %s: %v", serviceID, err)
+                }
+                time.Sleep(500 * time.Millisecond)
+                continue
+            }
+
+            lineBuf = append(lineBuf, line...)
+            if !isPrefix {
+                runtime.EventsEmit(a.ctx, "service-log-line", map[string]interface{}{
+                    "serviceId": serviceID,
+                    "line":      string(lineBuf),
+                })
+                lineBuf = lineBuf[:0]
+            }
+        }
+    }
+}
+
+// StopMonitoringLog stops tailing the service's log file.
+func (a *App) StopMonitoringService(serviceID string) {
+	a.logTailersLock.Lock()
+	defer a.logTailersLock.Unlock()
+    if info, exists := a.logTailers[serviceID]; exists {
+        info.cancel()
+        <-info.done // Wait for tailer to finish
+        delete(a.logTailers, serviceID)
+    }
 }
 
 // SelectFile opens a file selection dialog

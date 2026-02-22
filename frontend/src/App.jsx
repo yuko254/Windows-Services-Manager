@@ -1,5 +1,25 @@
 import { useState, useEffect, useCallback, useMemo, memo, useContext } from 'react';
 import { ThemeContext } from './main';
+import { EventsOn, EventsOff } from '../wailsjs/runtime/runtime';
+import { 
+  GetServices, 
+  CreateService, 
+  StartService, 
+  StopService, 
+  DeleteService,
+  SelectFile,
+  SelectDirectory,
+  CheckAdminPrivileges,
+  SetAutoStart,
+  GetAutoStartStatus,
+  SetServiceAutoStart,
+  RestartAsAdmin,
+  AddPathVariable,
+  OpenSystemEnvironmentSettings,
+  ValidatePathExists,
+  DiagnoseEnvironmentAccess,
+  StartMonitoringService
+} from "../wailsjs/go/main/App";
 import {
   makeStyles,
   Button,
@@ -9,7 +29,6 @@ import {
   TableRow,
   TableHeaderCell,
   TableBody,
-  TableCell,
   Dialog,
   DialogTrigger,
   DialogSurface,
@@ -29,35 +48,15 @@ import {
 } from '@fluentui/react-components';
 import {
   Add24Regular,
-  Play24Regular,
-  Stop24Regular,
-  Delete24Regular,
   Settings24Regular,
   ArrowClockwise24Regular,
   BuildingMultiple24Regular,
   Document24Regular,
   Folder24Regular
 } from '@fluentui/react-icons';
-import { EventsOn, EventsOff } from '../wailsjs/runtime/runtime';
 import './App.css';
-import { 
-  GetServices, 
-  CreateService, 
-  StartService, 
-  StopService, 
-  DeleteService,
-  SelectFile,
-  SelectDirectory,
-  CheckAdminPrivileges,
-  SetAutoStart,
-  GetAutoStartStatus,
-  SetServiceAutoStart,
-  RestartAsAdmin,
-  AddPathVariable,
-  OpenSystemEnvironmentSettings,
-  ValidatePathExists,
-  DiagnoseEnvironmentAccess
-} from "../wailsjs/go/main/App";
+import ServiceRow from './components/ServiceRow'; 
+import ServiceLogViewer from './components/ServiceLogViewer'; 
 
 const useStyles = makeStyles({
   toastGrid: {
@@ -72,100 +71,13 @@ const useStyles = makeStyles({
   },
 });
 
-// Service row component, optimized with memo
-const ServiceRow = memo(({ service, onStart, onStop, onDelete, onAutoStartToggle }) => {
-  const handleStart = useCallback(() => onStart(service.id), [service.id, onStart]);
-  const handleStop = useCallback(() => onStop(service.id), [service.id, onStop]);
-  const handleDelete = useCallback(() => onDelete(service.id), [service.id, onDelete]);
-  const handleAutoStartToggle = useCallback((checked) => onAutoStartToggle(service.id, checked), [service.id, onAutoStartToggle]);
-
-  return (
-    <TableRow key={service.id} className="win11-table-row">
-      <TableCell>
-        <Text weight="semibold" size="300">{service.name}</Text>
-        <br />
-        <Text size="200" style={{ color: '#666' }}>
-          PID: {service.pid || 'N/A'}
-        </Text>
-      </TableCell>
-      <TableCell>
-        <div className={`service-status ${service.status}`}>
-          <div style={{
-            width: '6px',
-            height: '6px',
-            borderRadius: '50%',
-            backgroundColor: service.status === 'running' ? '#107c10' : 
-                           service.status === 'error' ? '#c42b1c' : '#605e5c'
-          }}></div>
-          {service.status === 'running' ? 'Running' : 
-           service.status === 'error' ? 'Error' : 'Stopped'}
-        </div>
-      </TableCell>
-      <TableCell>
-        <Text size="200" style={{ wordBreak: 'break-all' }}>
-          {service.exePath}
-        </Text>
-        {service.args && (
-          <>
-            <br />
-            <Text size="100" style={{ color: '#666', fontStyle: 'italic' }}>
-              Args: {service.args}
-            </Text>
-          </>
-        )}
-      </TableCell>
-      <TableCell>
-        <Switch
-          checked={service.autoStart || false}
-          onChange={(_, data) => handleAutoStartToggle(data.checked)}
-          className="win11-switch"
-        />
-      </TableCell>
-      <TableCell>
-        <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-          {service.status === 'stopped' ? (
-            <Tooltip content="Start service" relationship="label">
-              <Button
-                size="small"
-                appearance="subtle"
-                icon={<Play24Regular />}
-                onClick={handleStart}
-                className="win11-button"
-              />
-            </Tooltip>
-          ) : (
-            <Tooltip content="Stop service" relationship="label">
-              <Button
-                size="small"
-                appearance="secondary"
-                icon={<Stop24Regular />}
-                onClick={handleStop}
-                className="win11-button"
-              />
-            </Tooltip>
-          )}
-          
-          <Tooltip content="Delete service" relationship="label">
-            <Button
-              size="small"
-              appearance="subtle"
-              icon={<Delete24Regular />}
-              onClick={handleDelete}
-              className="win11-button win11-delete-button"
-            />
-          </Tooltip>
-        </div>
-      </TableCell>
-    </TableRow>
-  );
-});
-ServiceRow.displayName = 'ServiceRow';
-
 function App() {
-  const { isDark, toggleTheme } = useContext(ThemeContext);
+  const styles = useStyles();
+  const {isDark, toggleTheme} = useContext(ThemeContext);
   const [services, setServices] = useState([]);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isSettingsDialogOpen, setIsSettingsDialogOpen] = useState(false);
+  const [monitoredService, setMonitoredService] = useState(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isEnvDialogOpen, setIsEnvDialogOpen] = useState(false);
   const [serviceToDelete, setServiceToDelete] = useState(null);
@@ -181,9 +93,7 @@ function App() {
     workingDir: ''
   });
 
-  const styles = useStyles();
   const { dispatchToast } = useToastController();
-
   const showToast = useCallback((title, message, intent = 'success') => {
     dispatchToast(
       <Toast className={styles.toastGrid}>
@@ -194,6 +104,7 @@ function App() {
     );
   }, [dispatchToast]);
 
+  // re-render on services updates
   useEffect(() => {
     loadServices();
     checkAdminRights();
@@ -329,6 +240,20 @@ function App() {
       setServiceToDelete(null);
     }
   }, [serviceToDelete, showToast, loadServices]);
+
+  const handleMonitorService = useCallback(async (serviceId, serviceStatus) => {
+    try {
+      if (serviceStatus !== 'running') {
+        showToast('Error', 'Service must be running to monitor logs', 'error');
+        return;
+      }
+      
+      await StartMonitoringService(serviceId);
+      setMonitoredService(serviceId);
+    } catch (error) {
+      showToast('Error', 'Failed to start monitoring service logs: ' + error, 'error');
+    }
+  }, [showToast, loadServices]);
 
   const handleAutoStartToggle = useCallback(async (serviceId, enabled) => {
     try {
@@ -887,6 +812,7 @@ function App() {
                       onStart={handleStartService}
                       onStop={handleStopService}
                       onDelete={handleDeleteService}
+                      onMonitor={handleMonitorService}
                       onAutoStartToggle={handleAutoStartToggle}
                     />
                   ))}
@@ -938,6 +864,23 @@ function App() {
           </DialogBody>
         </DialogSurface>
       </Dialog>
+
+      {/* Service Monitoring Dialog */}
+      <Dialog open={!!monitoredService} onOpenChange={(_, data) => !data.open && setMonitoredService(null)}>
+          <DialogSurface>
+              <DialogBody>
+                  <DialogTitle>Logs for {monitoredService}</DialogTitle>
+                  <DialogContent>
+                      {monitoredService && (
+                          <ServiceLogViewer
+                              serviceId={monitoredService}
+                              onClose={() => setMonitoredService(null)}
+                          />
+                      )}
+                  </DialogContent>
+              </DialogBody>
+          </DialogSurface>
+      </Dialog>    
     </>
   );
 }

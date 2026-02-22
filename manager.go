@@ -26,16 +26,6 @@ type WindowsServiceManager struct {
 	ctx         context.Context
 }
 
-// getDataConfigPath returns the path to the data config file
-func getDataConfigPath() (string, error) {
-    configDir, err := os.UserConfigDir()
-    if err != nil {
-        return "", err
-    }
-    return filepath.Join(configDir, "Windows-Services-Manager", "data.json"), nil
-}
-
-
 // NewWindowsServiceManager creates a new Windows service manager
 func NewWindowsServiceManager() *WindowsServiceManager {
 	cache := NewServiceStatusCache()
@@ -52,6 +42,26 @@ func NewWindowsServiceManager() *WindowsServiceManager {
 		dataFile:    path,
 		statusCache: cache,
 	}
+}
+
+// getDataConfigPath returns the path to the data config file
+func getDataConfigPath() (string, error) {
+    configDir, err := os.UserConfigDir()
+    if err != nil {
+        return "", err
+    }
+    return filepath.Join(configDir, "Windows Service Manager.exe", "data.json"), nil
+}
+
+// GetServiceLogPath retrieves the log file path from the registry.
+func (wsm *WindowsServiceManager) GetServiceLogPath(serviceID string) (string, uint32, error) {
+    keyPath := fmt.Sprintf(`SYSTEM\CurrentControlSet\Services\%s\Parameters`, serviceID)
+    k, err := registry.OpenKey(registry.LOCAL_MACHINE, keyPath, registry.QUERY_VALUE)
+    if err != nil {
+        return keyPath, 0, err
+    }	
+    defer k.Close()
+    return k.GetStringValue("StdoutLog")
 }
 
 // SetContext sets the context for emitting events
@@ -175,9 +185,27 @@ func (wsm *WindowsServiceManager) createServiceWrapper(serviceName, exePath, arg
 		return "", fmt.Errorf("failed to get current executable path: %v", err)
 	}
 
+	// Store the core config
 	err = wsm.storeServiceConfigInRegistry(serviceName, exePath, args, workingDir)
 	if err != nil {
 		return "", fmt.Errorf("failed to store service configuration: %v", err)
+	}
+
+	// Define and store the log file paths in the registry as well
+	programData := os.Getenv("ProgramData")
+	if programData == "" {
+		programData = `C:\ProgramData` // fallback
+	}
+	logDir := filepath.Join(programData, "Windows Service Manager.exe", "logs")
+	os.MkdirAll(logDir, 0755)
+	Log := filepath.Join(logDir, serviceName + ".log")
+
+	// Store log paths in registry
+	if err := wsm.setServiceRegistryValue(serviceName, "Parameters", "StdoutLog", Log); err != nil {
+		return "", fmt.Errorf("failed to set StdoutLog: %w", err)
+	}
+	if err := wsm.setServiceRegistryValue(serviceName, "Parameters", "StderrLog", Log); err != nil {
+		return "", fmt.Errorf("failed to set StderrLog: %w", err)
 	}
 
 	return fmt.Sprintf(`"%s" --service-wrapper %s`, currentExe, serviceName), nil
